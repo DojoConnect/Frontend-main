@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp } from "react-icons/fi";
 import { ArrowUpIcon, ArrowRightIcon, ReadMoreIcon, IconA, IconB, IconC, IconD, IconE, IconF, IconG, IconH, IconI } from './dashboardData.js';
+import { boDashboardService, DashboardStats } from '@/services/bo-dashboard.service';
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -48,7 +49,7 @@ function getIcon(label: string) {
   }
 }
 // Transform API data into stats array for cards
-function buildStatsFromApiData(apiData: any) {
+function buildStatsFromApiData(apiData: DashboardStats | null) {
   if (!apiData) return METRIC_LABELS.map(label => ({
     label,
     value: 0,
@@ -56,19 +57,17 @@ function buildStatsFromApiData(apiData: any) {
     percentage: "0%"
   }));
 
-   return [
-    { label: "Total Dojos", value: apiData.total_dojos ?? 0, icon: getIcon("Total Dojos"), percentage: apiData.total_dojos_percent ?? "0%" },
-    { label: "Active Subscriptions", value: apiData.active_subscriptions ?? 0, icon: getIcon("Active Subscriptions"), percentage: apiData.active_subscriptions_percent ?? "0%" },
-    { label: "Unpaid Subscriptions", value: apiData.unpaid_subscriptions ?? 0, icon: getIcon("Unpaid Subscriptions"), percentage: apiData.unpaid_subscriptions_percent ?? "0%" },
-    { label: "Total Classes", value: apiData.classes?.total_classes ?? 0, icon: getIcon("Total Classes"), percentage: apiData.classes?.total_classes_percent ?? "0%" },
-    { label: "Monthly Revenue", value: apiData.revenue?.total_revenue ?? 0, icon: getIcon("Monthly Revenue"), percentage: apiData.revenue?.total_revenue_percent ?? "0%" },
-    { label: "Avg. Revenue Per Dojo", value: (apiData.revenue?.total_revenue && apiData.total_dojos)
-      ? (parseFloat(apiData.revenue.total_revenue) / apiData.total_dojos).toFixed(2)
-      : 0, icon: getIcon("Avg. Revenue Per Dojo"), percentage: apiData.avg_revenue_per_dojo_percent ?? "0%" },
-    { label: "Gross Transaction Vol.", value: apiData.revenue?.total_revenue ?? 0, icon: getIcon("Gross Transaction Vol."), percentage: apiData.gross_transaction_vol_percent ?? "0%" },
-    { label: "Completed Onboarding", value: apiData.completed_onboarding ?? 0, icon: getIcon("Completed Onboarding"), percentage: apiData.completed_onboarding_percent ?? "0%" },
-    { label: "Incomplete Onboarding", value: apiData.incomplete_onboarding ?? 0, icon: getIcon("Incomplete Onboarding"), percentage: apiData.incomplete_onboarding_percent ?? "0%" },
-    { label: "Dojo Engagement Index", value: apiData.engagement_index ?? 0, icon: getIcon("Dojo Engagement Index"), percentage: apiData.engagement_index_percent ?? "0%" }
+  return [
+    { label: "Total Dojos", value: apiData.activeDojos ?? 0, icon: getIcon("Total Dojos"), percentage: "0%" },
+    { label: "Active Subscriptions", value: apiData.activeSubscriptions ?? 0, icon: getIcon("Active Subscriptions"), percentage: "0%" },
+    { label: "Unpaid Subscriptions", value: 0, icon: getIcon("Unpaid Subscriptions"), percentage: "0%" },
+    { label: "Total Classes", value: apiData.activeClasses ?? 0, icon: getIcon("Total Classes"), percentage: "0%" },
+    { label: "Monthly Revenue", value: apiData.totalRevenue ?? "0", icon: getIcon("Monthly Revenue"), percentage: "0%" },
+    { label: "Avg. Revenue Per Dojo", value: apiData.avgRevenuePerDojo ?? "0", icon: getIcon("Avg. Revenue Per Dojo"), percentage: "0%" },
+    { label: "Gross Transaction Vol.", value: apiData.grossTransactionVolume ?? "0", icon: getIcon("Gross Transaction Vol."), percentage: "0%" },
+    { label: "Completed Onboarding", value: apiData.completedOnboarding ?? 0, icon: getIcon("Completed Onboarding"), percentage: "0%" },
+    { label: "Incomplete Onboarding", value: apiData.incompleteOnboarding ?? 0, icon: getIcon("Incomplete Onboarding"), percentage: "0%" },
+    { label: "Dojo Engagement Index", value: apiData.dojoEngagementIndex ?? "0", icon: getIcon("Dojo Engagement Index"), percentage: "0%" }
   ];
 }
 
@@ -94,48 +93,22 @@ export default function DashboardSummary() {
 
   // Fetch dashboard metrics from API
   useEffect(() => {
-    let endpoint = "";
-    let payload: any = {};
-
-    if (activeFilter === "Today") {
-      endpoint = "/metrics/overview";
-      payload.period = "today";
-    } else if (activeFilter === "This week") {
-      endpoint = "/metrics/overview";
-      payload.period = "this_week";
-    } else if (activeFilter === "This month") {
-      endpoint = "/metrics/overview";
-      payload.period = "this_month";
-    } else if (activeFilter === "All time") {
-      endpoint = "/metrics/overview";
-      payload.period = "all";
-    } else if (activeFilter === "Custom date" && selectedDate) {
-      endpoint = "/metrics/overview";
-      payload.period = "custom";
-      payload.start_date = selectedDate.toISOString().split("T")[0];
-      payload.end_date = selectedDate.toISOString().split("T")[0];
-    } else {
-      setApiData(null);
-      return;
-    }
-
     setLoading(true);
-    fetch(`https://apis.dojoconnect.app${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.success && data.data) {
-          setApiData(data.data);
+    
+    boDashboardService.getDashboardStats()
+      .then(response => {
+        if (response && response.data) {
+          setApiData(response.data);
         } else {
           setApiData(null);
         }
       })
-      .catch(() => setApiData(null))
+      .catch(error => {
+        console.error('Failed to fetch dashboard stats:', error);
+        setApiData(null);
+      })
       .finally(() => setLoading(false));
-  }, [activeFilter, selectedDate]);
+  }, []);
 
   // Calendar logic
   const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();

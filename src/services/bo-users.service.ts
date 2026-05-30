@@ -1,4 +1,4 @@
-import { httpBackOfficeGet, httpBackOfficePost } from './http';
+import { httpBackOfficeGet, httpBackOfficePost, httpBackOfficeDelete } from './http';
 
 export interface UserStats {
   dojoOwners: {
@@ -84,6 +84,18 @@ export interface CreateUserResponse {
   message: string;
 }
 
+export interface DeleteUserResponse {
+  success: boolean;
+  message: string;
+  data: null;
+}
+
+export interface DeleteUserResponse {
+  success: boolean;
+  message: string;
+  data: null;
+}
+
 class BackOfficeUsersService {
   /**
    * Get user statistics with optional date range filtering
@@ -163,6 +175,21 @@ class BackOfficeUsersService {
       return response;
     } catch (error) {
       console.error('Failed to create instructor:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a user by ID
+   * @param userId The ID of the user to delete
+   * @returns Deletion response
+   */
+  async deleteUser(userId: string): Promise<DeleteUserResponse> {
+    try {
+      const response = await httpBackOfficeDelete<DeleteUserResponse>(`/backoffice/users/${userId}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to delete user:', error);
       throw error;
     }
   }

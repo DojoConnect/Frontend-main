@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaEllipsisV, FaEye, FaTrash, FaTimes } from "react-icons/fa";
+import { boUsersService } from "@/services/bo-users.service";
 
 // Define the User type or import it from the appropriate file
 interface User {
@@ -165,15 +166,12 @@ export default function UsersTable({ user, onUserClick, onDeleteClick, showUserT
                 className="bg-red-600 text-white rounded-md px-4 py-2 font-medium w-full"
                 onClick={async () => {
                   try {
-                    await fetch(`https://apis.dojoconnect.app/admin/users/${deleteUser.email}`, {
-                      method: "DELETE",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ confirm: true }),
-                    });
+                    await boUsersService.deleteUser(deleteUser.id as string);
+                    setShowDeleteModal(false);
                   } catch (err) {
-                    // handle error if needed
+                    console.error('Failed to delete user:', err);
+                    setShowDeleteModal(false);
                   }
-                  setShowDeleteModal(false);
                 }}
               >
                 Delete
