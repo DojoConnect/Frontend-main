@@ -1,4 +1,4 @@
-import { httpBackOfficeGet } from './http';
+import { httpBackOfficeGet, httpBackOfficePost } from './http';
 
 export interface UserStats {
   dojoOwners: {
@@ -56,6 +56,34 @@ export interface ListUsersParams {
   search?: string;
 }
 
+export interface CreateDojoOwnerRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  dojoName: string;
+  dojoLocation: string;
+}
+
+export interface CreateParentRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export interface CreateInstructorRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export interface CreateUserResponse {
+  data: {
+    userId: string;
+    email: string;
+  };
+  message: string;
+}
+
 class BackOfficeUsersService {
   /**
    * Get user statistics with optional date range filtering
@@ -90,6 +118,51 @@ class BackOfficeUsersService {
       return response;
     } catch (error) {
       console.error('Failed to fetch users:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new Dojo Owner
+   * @param data Dojo owner information
+   * @returns Created user details
+   */
+  async createDojoOwner(data: CreateDojoOwnerRequest): Promise<CreateUserResponse> {
+    try {
+      const response = await httpBackOfficePost<CreateUserResponse>('/users/dojo-owner', data);
+      return response;
+    } catch (error) {
+      console.error('Failed to create dojo owner:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new Parent
+   * @param data Parent information
+   * @returns Created user details
+   */
+  async createParent(data: CreateParentRequest): Promise<CreateUserResponse> {
+    try {
+      const response = await httpBackOfficePost<CreateUserResponse>('/users/parent', data);
+      return response;
+    } catch (error) {
+      console.error('Failed to create parent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new Instructor
+   * @param data Instructor information
+   * @returns Created user details
+   */
+  async createInstructor(data: CreateInstructorRequest): Promise<CreateUserResponse> {
+    try {
+      const response = await httpBackOfficePost<CreateUserResponse>('/users/instructor', data);
+      return response;
+    } catch (error) {
+      console.error('Failed to create instructor:', error);
       throw error;
     }
   }

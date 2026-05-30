@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import ProfileFormModal from "./ProfileFormModal";
 import ConfirmProfileModal from "./ConfirmProfileModal";
+import { boUsersService } from "@/services/bo-users.service";
 
 const userTypes = [
   {
@@ -42,17 +43,20 @@ const CreateProfileModal = ({ onClose }: { onClose: () => void }) => {
   const handleConfirm = async () => {
     if (!pendingPayload) return;
     try {
-      await fetch("https://backoffice-api.dojoconnect.app/create_user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pendingPayload),
-      });
+      if (selectedType === "admin") {
+        await boUsersService.createDojoOwner(pendingPayload);
+      } else if (selectedType === "instructor") {
+        await boUsersService.createInstructor(pendingPayload);
+      } else if (selectedType === "parent") {
+        await boUsersService.createParent(pendingPayload);
+      }
       setShowConfirm(false);
       setShowProfileForm(false);
       setSelectedType(null);
       setPendingPayload(null);
       onClose();
-    } catch {
+    } catch (error) {
+      console.error("Failed to create user:", error);
       setShowConfirm(false);
       setShowProfileForm(false);
       setSelectedType(null);

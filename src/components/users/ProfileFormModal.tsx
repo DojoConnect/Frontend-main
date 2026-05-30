@@ -25,23 +25,30 @@ const ProfileFormModal = ({
 
   // Map frontend form to backend payload
   const getPayload = () => {
-    let name = `${form.firstName} ${form.lastName}`.trim();
-    let payload: any = {
-      name,
-      email: form.email,
-      role: type,
-    };
     if (type === "admin") {
-      payload.dojo_name = form.dojoName;
-      payload.dojo_location = form.dojoLocation;
+      return {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        dojoName: form.dojoName,
+        dojoLocation: form.dojoLocation,
+      };
     }
     if (type === "instructor") {
-      payload.instructor_dojo = form.instructorDojo;
+      return {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+      };
     }
     if (type === "parent") {
-      payload.parent_phone = form.parentPhone;
+      return {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+      };
     }
-    return payload;
+    return {};
   };
 
   const handleSubmit = (e: React.FormEvent) => {
