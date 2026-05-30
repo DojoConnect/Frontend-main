@@ -13,6 +13,7 @@ export default function ForgotPasswordFlow() {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [resetToken, setResetToken] = useState("");
 
    return (
     <>
@@ -26,8 +27,10 @@ export default function ForgotPasswordFlow() {
           )}
           {step === 2 && (
           <VerifyOtpStep
-            onVerify={(enteredOtp: string) => {
+            email={email}
+            onVerify={(enteredOtp: string, token: string) => {
             setOtp(enteredOtp);
+            setResetToken(token);
             setStep(3);
             }}
           />
@@ -38,6 +41,7 @@ export default function ForgotPasswordFlow() {
           onContinue={() => setStep(4)}
           email={email}
           otp={otp}
+          resetToken={resetToken}
         />
       )}
       {step === 4 && (

@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { LuEye, LuEyeOff } from "react-icons/lu";
+import { resetPassword } from "@/services/auth.service";
 
 export default function CreateNewPassword({
   onContinue,
   email,
   otp,
+  resetToken,
 }: {
   onContinue: () => void;
   email: string;
   otp: string;
+  resetToken: string;
 }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -19,26 +22,24 @@ export default function CreateNewPassword({
 
   const isFilled = password && confirm && password === confirm;
 
-const handleContinue = async () => {
-  setLoading(true);
-  setError(null);
-  const res = await fetch("https://backoffice-api.dojoconnect.app/admin_reset_password", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email, // from step 1
-      otp,   // from step 2
-      new_password: password,
-    }),
-  });
-  const data = await res.json();
-  if (data.success) {
-    onContinue(); // go to success step
-  } else {
-    setError(data.message || "Error resetting password");
-  }
-  setLoading(false);
-};
+  const handleContinue = async () => {
+    if (!isFilled) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await resetPassword(password, resetToken);
+      console.log('Password reset successful:', response);
+      onContinue(); // go to success step
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || "Error resetting password";
+      setError(errorMessage);
+      console.error('Password reset error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
  
   return (
@@ -56,12 +57,14 @@ const handleContinue = async () => {
               placeholder="Enter your password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full rounded-md px-3 border border-gray-200 h-12 text-sm placeholder:text-gray-400"
+              disabled={loading}
+              className="w-full rounded-md px-3 border border-gray-200 h-12 text-sm placeholder:text-gray-400 disabled:bg-gray-100"
             />
             <button
               type="button"
               onClick={() => setShowPassword(v => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+              disabled={loading}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 disabled:opacity-50"
             >
               {showPassword ? <LuEyeOff size={20} /> : <LuEye size={20} />}
             </button>
@@ -70,25 +73,35 @@ const handleContinue = async () => {
           <div className="relative mb-4">
             <input
               type={showConfirm ? "text" : "password"}
-              placeholder="Enter your password"
+              placeholder="Confirm your password"
               value={confirm}
               onChange={e => setConfirm(e.target.value)}
-              className="w-full rounded-md px-3 border border-gray-200 h-12 text-sm placeholder:text-gray-400"
+              disabled={loading}
+              className="w-full rounded-md px-3 border border-gray-200 h-12 text-sm placeholder:text-gray-400 disabled:bg-gray-100"
             />
             <button
               type="button"
               onClick={() => setShowConfirm(v => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+              disabled={loading}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 disabled:opacity-50"
             >
               {showConfirm ? <LuEyeOff size={20} /> : <LuEye size={20} />}
             </button>
           </div>
+          
+          {/* Error message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
+              {error}
+            </div>
+          )}
+          
           <button
-            className={`w-full h-12 rounded-md text-white font-semibold ${isFilled ? "bg-[#E51B1B]" : "bg-red-200"}`}
-            disabled={!isFilled}
+            className={`w-full h-12 rounded-md text-white font-semibold ${(isFilled && !loading) ? "bg-[#E51B1B]" : "bg-red-200"}`}
+            disabled={!isFilled || loading}
             onClick={handleContinue}
           >
-            Continue
+            {loading ? "Resetting..." : "Continue"}
           </button>
         </div>
       </div>

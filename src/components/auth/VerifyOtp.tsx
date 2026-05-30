@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
+import { verifyPasswordResetOtp } from "@/services/auth.service";
 
-export default function VerifyOtp({ onVerify }: { onVerify: (otp: string) => void }) {
+export default function VerifyOtp({ onVerify, email }: { onVerify: (otp: string, resetToken: string) => void; email: string }) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(120);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (timer > 0) {
@@ -21,9 +24,29 @@ export default function VerifyOtp({ onVerify }: { onVerify: (otp: string) => voi
     }
   };
 
-  const handleVerify = () => {
-    if (isFilled) {
-      onVerify(otp.join(""));
+  const handleVerify = async () => {
+    if (!isFilled) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const otpCode = otp.join("");
+      const response = await verifyPasswordResetOtp(email, otpCode);
+      console.log('OTP verified:', response);
+      
+      // Pass both OTP and resetToken  to next step
+      if (response.data?.resetToken) {
+        onVerify(otpCode, response.data.resetToken);
+      } else {
+        setError('No reset token received');
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || "Error verifying OTP";
+      setError(errorMessage);
+      console.error('OTP verification error:', err);
+    } finally {
+      setLoading(false);
     }
   };
   return (
@@ -45,23 +68,32 @@ export default function VerifyOtp({ onVerify }: { onVerify: (otp: string) => voi
                 maxLength={1}
                 value={digit}
                 onChange={e => handleChange(e.target.value, idx)}
-                className="w-10 h-12 rounded-md bg-gray-100 text-center text-lg text-gray-700"
+                disabled={loading}
+                className="w-10 h-12 rounded-md bg-gray-100 text-center text-lg text-gray-700 disabled:opacity-50"
                 placeholder="-"
               />
             ))}
           </div>
           <div className="flex justify-between items-center mb-4">
             <span className="text-sm text-gray-500">
-              Didn't get code? <button className="text-red-500 underline">Resend</button>
+              Didn't get code? <button className="text-red-500 underline" disabled={loading}>Resend</button>
             </span>
             <span className="text-sm text-gray-500">{`${Math.floor(timer / 60)}:${String(timer % 60).padStart(2, "0")}`}</span>
           </div>
+          
+          {/* Error message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
+              {error}
+            </div>
+          )}
+          
           <button
-        className={`w-full h-12 rounded-md text-white font-semibold ${isFilled ? "bg-[#E51B1B]" : "bg-red-200"}`}
-        disabled={!isFilled}
+        className={`w-full h-12 rounded-md text-white font-semibold ${(isFilled && !loading) ? "bg-[#E51B1B]" : "bg-red-200"}`}
+        disabled={!isFilled || loading}
         onClick={handleVerify}
       >
-        Verify code
+        {loading ? "Verifying..." : "Verify code"}
       </button>
         </div>
       </div>

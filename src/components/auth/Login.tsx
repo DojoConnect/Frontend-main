@@ -3,37 +3,38 @@
 import { useState } from 'react';
 import { LuEye, LuEyeOff } from "react-icons/lu";
 import { useRouter } from 'next/navigation';
+import { login } from '@/services/auth.service';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const isFormFilled = email.trim() !== '' && password.trim() !== '';
 
   const handleLogin = async () => {
-  if (!isFormFilled) return;
-  try {
-    const res = await fetch('https://www.backoffice-api.dojoconnect.app/login_admin', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-});
-const data = await res.json();
-    console.log('Login response:', res.status, data);
-
-    if (!res.ok) {
-      // Handle error (show message)
-      alert('Login failed');
-      return;
+    if (!isFormFilled) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await login(email, password);
+      console.log('Login successful:', response);
+      
+      // Redirect to dashboard on successful login
+      router.push('/dashboard?tab=dashboard');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Login failed';
+      setError(errorMessage);
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
     }
-    // Optionally handle token or user data
-    router.push('/dashboard?tab=dashboard');
-  } catch (error) {
-    alert('An error occurred');
-  }
-};
+  };
 
   return (
     <div className="flex min-h-screen">
@@ -110,22 +111,31 @@ const data = await res.json();
       type="button"
       className="text-red-700 text-sm cursor-pointer"
       onClick={() => router.push('/forgot-password')}
+      disabled={loading}
     >
       Forgot password?
     </button>
   </div>
+
+  {/* Error message */}
+  {error && (
+    <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
+      {error}
+    </div>
+  )}
+
           {/* Login Button */}
           <button
             onClick={handleLogin}
             className={`w-full h-[55px] text-white font-semibold py-2 rounded-md ${
-              isFormFilled ? '' : 'bg-red-300'
+              isFormFilled && !loading ? '' : 'bg-red-300'
             }`}
             style={{
-              backgroundColor: isFormFilled ? '#E51B1B' : '#FCA5A5',
+              backgroundColor: (isFormFilled && !loading) ? '#E51B1B' : '#FCA5A5',
             }}
-            disabled={!isFormFilled}
+            disabled={!isFormFilled || loading}
           >
-            Log In
+            {loading ? 'Logging in...' : 'Log In'}
           </button>
         </div>
       </div>
