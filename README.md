@@ -1,162 +1,36 @@
-# DojoConnect Backoffice Frontend
-
-A Next.js-based backoffice management application for DojoConnect.
-
-## Features
-
-- **User Management** - Manage admins, instructors, parents, and students
-- **Class Management** - Create, edit, and organize martial arts classes
-- **Search & Filtering** - Real-time search with debouncing for optimal performance
-- **Profile Management** - Detailed user profiles with image support
-- **Dashboard** - Analytics and metrics overview
-- **Feedback System** - Collect and manage user feedback
-- **Revenue Tracking** - Monitor payments and revenue
-
-## Tech Stack
-
-- **Framework:** Next.js 15.3.4
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS
-- **UI Components:** Custom React components + lucide-react icons
-- **HTTP Client:** Axios with interceptors
-- **State Management:** React Hooks
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
-### Prerequisites
-- Node.js 16+
-- npm or yarn
-
-### Installation
-
-```bash
-npm install
-```
-
-### Development
+First, run the development server:
 
 ```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-The app will be available at `http://localhost:3000`
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### Build
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-```bash
-npm run build
-```
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-### Production
+## Learn More
 
-```bash
-npm start
-```
+To learn more about Next.js, take a look at the following resources:
 
-## Environment Variables
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-Create a `.env.local` file in the root directory:
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-```
-NEXT_PUBLIC_API_URL=https://apis.dojoconnect.app/api
-```
+## Deploy on Vercel
 
-## Project Structure
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-```
-src/
-├── app/                 # Next.js app router pages
-│   ├── layout.tsx      # Root layout
-│   ├── page.tsx        # Home page
-│   └── dashboard/      # Dashboard routes
-├── components/         # Reusable React components
-│   ├── auth/          # Authentication components
-│   ├── Dashboard/     # Dashboard components
-│   ├── classes/       # Class management
-│   ├── users/         # User management
-│   ├── feedback/      # Feedback components
-│   ├── revenue/       # Revenue tracking
-│   └── ui/            # UI primitives
-├── lib/               # Utility functions
-│   ├── utils.ts       # Common utilities
-│   ├── useDebounce.ts # Debounce hook
-│   └── tokenStorage.ts # Token management
-└── services/          # API services
-    ├── http.ts        # HTTP client configuration
-    ├── auth.service.ts
-    ├── users.service.ts
-    ├── classes.service.ts
-    └── ...
-
-public/               # Static assets
-```
-
-## Search & Filtering
-
-The application includes optimized search functionality:
-
-- **Debounced Search:** 300ms delay reduces API calls while typing
-- **Client-side Filtering:** Fast filtering for already-loaded data
-- **Server-side Search:** Optional backend search integration
-
-### Usage Example
-
-```typescript
-import { useDebounce } from '@/lib/useDebounce';
-
-const [searchQuery, setSearchQuery] = useState('');
-const debouncedSearch = useDebounce(searchQuery, 300);
-
-// Use debouncedSearch in API calls
-```
-
-## Key Components
-
-### ProfileHeader
-Displays user profile information with image fallback support.
-
-### SearchFilterExport
-Search bar with filter and export options in table headers.
-
-### ClassesPage
-List of classes with pagination and search functionality.
-
-### UsersPage
-User management with filtering by role and date range.
-
-## Recent Improvements
-
-✅ **Search Functionality** - Classes and feedback pages now have working search
-✅ **Performance Optimization** - Reduced initial load with pagination
-✅ **Image Display** - Profile images with fallback to default avatar
-✅ **Type Safety** - Full TypeScript support throughout
-✅ **Debouncing** - Efficient search with 300ms debounce
-
-## API Integration
-
-The app connects to a backend API at `https://apis.dojoconnect.app/api`. Services handle:
-
-- User authentication and profiles
-- Class management
-- Feedback collection
-- User statistics
-- Revenue data
-
-## Authentication
-
-JWT-based authentication with token stored in localStorage. Tokens are automatically injected in all API requests.
-
-## Contributing
-
-1. Create a feature branch
-2. Make your changes
-3. Test thoroughly
-4. Submit a pull request
-
-## Support
-
-For issues or questions, please contact the development team.
-
----
-
-**Last Updated:** May 29, 2026
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
