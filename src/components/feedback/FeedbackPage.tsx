@@ -1,35 +1,44 @@
 import React, { useState, useEffect } from "react";
-import SearchActionBar from "../users/InstructorProfile/SearchActionBar";
+import Avatar from '@/components/ui/Avatar';
+import { boFeedbackService } from "@/services/bo-feedback.service";
 import Pagination from "../users/InstructorProfile/Pagination";
 import FeedbackModal from "./FeedbackModal";
+import { formatDateCustom } from "@/lib/dateFormatter";
 
 export default function FeedbackPage() {
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
+  const [search, setSearch] = useState<string>('');
 
   useEffect(() => {
-    fetch("https://backoffice-api.dojoconnect.app/get_feedback")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setFeedbacks(
-            data.map((fb: any) => ({
-              id: fb.id,
-              img: "/Avatars.jpg",
-              name: fb.full_name,
-              email: fb.user_email,
-              userType: fb.role ? fb.role.charAt(0).toUpperCase() + fb.role.slice(1) : "",
-              feedback: fb.message,
-              date: fb.submitted_at ? fb.submitted_at.split(" ")[0] : "",
-              time: fb.submitted_at ? fb.submitted_at.split(" ")[1] : "",
-              status: "In-Review",
-            }))
-          );
-        }
-      });
-  }, []);
+    const fetchFeedbacks = async () => {
+      try {
+        const res = await boFeedbackService.listFeedbacks({ page, limit: rowsPerPage, search });
+        const items = Array.isArray(res.data) ? res.data : [];
+        setTotalCount(res.meta?.totalCount ?? items.length);
+        setFeedbacks(
+          items.map((fb: any) => ({
+            id: fb.id,
+            img: "/Avatars.jpg",
+            name: fb.fullName || fb.firstName + ' ' + fb.lastName,
+            email: fb.userEmail || fb.email,
+            userType: fb.role ? fb.role.charAt(0).toUpperCase() + fb.role.slice(1) : "",
+            feedback: fb.feedback || fb.message || fb.content,
+            date: fb.createdAt ? formatDateCustom(fb.createdAt) : "",
+            time: fb.createdAt?.split("T")[1] || "",
+            status: "In-Review",
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to fetch feedbacks:", error);
+      }
+    };
+
+    fetchFeedbacks();
+  }, [page, rowsPerPage, search]);
 
   useEffect(() => {
     const totalPages = Math.ceil(feedbacks.length / rowsPerPage);
@@ -42,8 +51,23 @@ export default function FeedbackPage() {
     <div className="p-4 sm:p-8 space-y-6 relative">
       <div className="font-bold text-lg sm:text-xl mb-2">Feedbacks</div>
       <div className="bg-white rounded-md p-2 sm:p-4 space-y-4">
-        {/* Only show SearchActionBar if there are feedbacks */}
-        {feedbacks.length > 0 && <SearchActionBar />}
+        <div className="flex items-center justify-between mb-4 gap-3">
+          <div className="flex items-center border border-gray-200 rounded-md px-3 py-2 bg-white w-full max-w-sm">
+            <span className="text-gray-400 mr-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </span>
+            <input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              type="text"
+              placeholder="Search feedback"
+              className="outline-none bg-transparent text-sm w-full"
+            />
+          </div>
+        </div>
         <div>
           {feedbacks.length === 0 ? (
             <div className="flex bg-white mt-4 flex-col items-center justify-center py-20 rounded-xl" style={{ border: '1px solid #E4E7EC' }}>
@@ -74,10 +98,9 @@ export default function FeedbackPage() {
                         onClick={() => setSelectedFeedback(fb)}
                       >
                         <td className="p-2 sm:p-3 flex items-center gap-2">
-                          <img src={fb.img} alt={fb.name} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full" />
+                          <Avatar src={fb.img} alt={fb.name} size={32} className="w-7 h-7 sm:w-8 sm:h-8" />
                           <span className="whitespace-nowrap">{fb.name}</span>
                         </td>
-                        <td className="p-2 sm:p-3 whitespace-nowrap">{fb.userType}</td>
                         <td className="p-2 sm:p-3">{fb.feedback}</td>
                         <td className="p-2 sm:p-3">{fb.date} {fb.time}</td>
                         <td className="p-2 sm:p-3">
@@ -97,7 +120,7 @@ export default function FeedbackPage() {
                 </table>
               </div>
               <Pagination
-                totalRows={feedbacks.length}
+                totalRows={totalCount}
                 rowsPerPage={rowsPerPage}
                 currentPage={page}
                 onPageChange={setPage}

@@ -1,6 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation';
+import { boUsersService } from '@/services/bo-users.service';
+import { boClassesService } from '@/services/bo-classes.service';
+import CloudinaryImage from '@/components/ui/CloudinaryImage';
+import Avatar from '@/components/ui/Avatar';
 import { useUserClasses } from "../../../hooks/useUserClasses";
 import { FaUser, FaEnvelope, FaCopy, FaCalendarAlt, FaChevronDown } from "react-icons/fa";
+import { formatDateCustom } from "@/lib/dateFormatter";
 
 interface OverviewProps {
   profile: {
@@ -27,20 +33,26 @@ interface OverviewProps {
 
 const formatDate = (dateStr?: string | null) => {
   if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  try {
+    return formatDateCustom(dateStr);
+  } catch {
+    return "-";
+  }
+};
+const formatFrequency = (freq?: string) => {
+  if (!freq) return "-";
+  try {
+    return String(freq).split('_').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+  } catch {
+    return String(freq);
+  }
 };
 const fallback = (val: any, alt: string = "-") =>
   val !== undefined && val !== null && val !== "" ? val : alt;
 
 const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
   const { classes, loading } = useUserClasses(email);
+  const router = useRouter();
   const [showActions, setShowActions] = useState(false);
   const [modal, setModal] = useState<null | "deactivate" | "export" | "delete" | "saveConfirm">(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -51,6 +63,28 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
     gender: profile.gender ?? "",
   });
   const [localProfile, setLocalProfile] = useState(profile);
+  // Keep localProfile in sync when parent provides new profile prop
+  React.useEffect(() => {
+    setLocalProfile(profile);
+  }, [profile]);
+  const [backendAssignedClasses, setBackendAssignedClasses] = useState<any[]>([]);
+
+  useEffect(() => {
+    // If profile doesn't include assigned_classes, try fetching classes by instructorId
+    const shouldFetch = (!localProfile?.assigned_classes || localProfile.assigned_classes.length === 0) && profile?.id;
+    if (!shouldFetch) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const resp = await boClassesService.listClasses({ page: 1, limit: 100, instructorId: String(profile.id) } as any);
+        const arr = (resp && resp.data) ? resp.data : [];
+        if (mounted) setBackendAssignedClasses(Array.isArray(arr) ? arr : []);
+      } catch (e) {
+        if (mounted) setBackendAssignedClasses([]);
+      }
+    })();
+    return () => { mounted = false };
+  }, [profile?.id, localProfile?.assigned_classes]);
   const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState(false);
 
@@ -58,16 +92,15 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
     setLoadingAction(true);
     setError(null);
     try {
-      await fetch(`https://apis.dojoconnect.app/admin/instructors/${profile.email}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editValues.name,
-          email: editValues.email,
-          age: editValues.age,
-          gender: editValues.gender,
-        }),
-      });
+      const idOrEmail = profile.id || (profile as any).userId || profile.email;
+      await boUsersService.updateUser(String(idOrEmail), {
+        firstName: editValues.name?.split(' ')[0] || undefined,
+        lastName: editValues.name?.split(' ').slice(1).join(' ') || undefined,
+        email: editValues.email,
+        dob: undefined,
+        gender: editValues.gender,
+        // age is not directly mapped; omit if not supported
+      } as any);
       setIsEditing(false);
       setModal(null);
       setLocalProfile((prev: any) => ({
@@ -85,11 +118,8 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
     setLoadingAction(true);
     setError(null);
     try {
-      await fetch(`https://apis.dojoconnect.app/admin/instructors/${profile.email}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "inactive" }),
-      });
+      const idOrEmail = profile.id || (profile as any).userId || profile.email;
+      await boUsersService.updateUserStatus(String(idOrEmail), 'inactive');
       setModal(null);
       setLocalProfile((prev: any) => ({
         ...prev,
@@ -283,7 +313,7 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
               <FaUser className="text-gray-400 mr-3 text-xl" />
               <div>
                 <div className="text-xs text-gray-500">Full Name</div>
-                <div className="text-base text-black font-semibold">{fallback(localProfile.name)}</div>
+                <div className="text-base text-black font-semibold capitalize">{fallback(localProfile.name)}</div>
               </div>
             </div>
             <FaCopy className="text-gray-400 cursor-pointer" />
@@ -303,7 +333,7 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
               <FaUser className="text-gray-400 mr-3 text-xl" />
               <div>
                 <div className="text-xs text-gray-500">Role</div>
-                <div className="text-base text-black">{fallback(localProfile.userType)}</div>
+                <div className="text-base text-black capitalize">{fallback(localProfile.userType)}</div>
               </div>
             </div>
           </div>
@@ -312,7 +342,7 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
               <FaUser className="text-gray-400 mr-3 text-xl" />
               <div>
                 <div className="text-xs text-gray-500">Age</div>
-                <div className="text-base text-black">{fallback(localProfile.age)}</div>
+                <div className="text-base text-black capitalize">{fallback(localProfile.age)}</div>
               </div>
             </div>
           </div>
@@ -321,7 +351,7 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
               <FaUser className="text-gray-400 mr-3 text-xl" />
               <div>
                 <div className="text-xs text-gray-500">Gender</div>
-                <div className="text-base text-black">{fallback(localProfile.gender)}</div>
+                <div className="text-base text-black capitalize">{fallback(localProfile.gender)}</div>
               </div>
             </div>
           </div>
@@ -344,7 +374,7 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
                 ? localProfile.assignedDojos
                 : ["-"]
               ).map((dojo: string, idx: number) => (
-                <span key={idx} className="text-base text-black">{dojo}</span>
+                <span key={idx} className="text-base text-black capitalize">{dojo}</span>
               ))}
             </div>
             <FaCopy className="text-gray-400 cursor-pointer ml-2" />
@@ -356,7 +386,7 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
                 ? localProfile.assigned_dates
                 : ["-"]
               ).map((date: string, idx: number) => (
-                <span key={idx} className="text-base text-black">{date}</span>
+                <span key={idx} className="text-base text-black">{formatDate(date)}</span>
               ))}
             </div>
             <FaCopy className="text-gray-400 cursor-pointer ml-2" />
@@ -377,44 +407,58 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between bg-gray-100 rounded-md px-4 py-2 mb-2">
               <span className="text-gray-700 font-semibold">
-                Assigned Classes ({(localProfile.assigned_classes || []).length})
+                Assigned Classes ({((localProfile.assigned_classes && localProfile.assigned_classes.length) ? localProfile.assigned_classes.length : backendAssignedClasses.length)})
               </span>
-              <button className="text-[#E51B1B] text-sm font-semibold hover:underline-none focus:outline-none bg-transparent border-none px-0 py-0">
+              <button
+                className="text-[#E51B1B] text-sm font-semibold hover:underline focus:outline-none bg-transparent border-none px-0 py-0"
+                onClick={() => router.push('/dashboard?tab=classes')}
+              >
                 View All
               </button>
             </div>
-            {(localProfile.assigned_classes && localProfile.assigned_classes.length > 0) ? (
+            {(((localProfile.assigned_classes && localProfile.assigned_classes.length > 0) ? localProfile.assigned_classes : backendAssignedClasses) && ((localProfile.assigned_classes && localProfile.assigned_classes.length > 0) ? localProfile.assigned_classes : backendAssignedClasses).length > 0) ? (
               <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-4">
-                {(localProfile.assigned_classes ?? []).map((cls: any, idx: number) => (
+                {((localProfile.assigned_classes && localProfile.assigned_classes.length > 0) ? localProfile.assigned_classes : backendAssignedClasses).map((cls: any, idx: number) => (
                   <div key={cls.class_uid || cls.id || idx} className="flex flex-col md:flex-row md:items-center gap-4 border-b border-gray-100 pb-4 last:border-b-0">
                     <div className="flex items-center gap-4 flex-1">
-                      <img
-                        src={cls.image_path ? `/${cls.image_path}` : "/classImage.png"}
-                        alt={cls.class_name || "-"}
-                        className="w-16 h-16 rounded-md object-cover"
-                      />
+                      {cls.imagePublicId || cls.public_id || cls.image_public_id ? (
+                        <CloudinaryImage
+                          publicId={cls.imagePublicId || cls.public_id || cls.image_public_id}
+                          alt={cls.class_name || ''}
+                          width={64}
+                          height={64}
+                          className="w-16 h-16 rounded-md"
+                        />
+                      ) : (
+                        <Avatar
+                          src={cls.imageUrl || (cls.image_path ? (cls.image_path.startsWith('http') ? cls.image_path : `${process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL}/${cls.image_path}`) : null)}
+                          alt={cls.class_name || ''}
+                          size={64}
+                          className="w-16 h-16 rounded-md object-cover"
+                        />
+                      )}
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <div className="font-semibold text-lg">{cls.class_name || "-"}{cls.level ? ` - ${cls.level}` : ""}</div>
-                          <span className={`rounded-full px-4 py-2 text-sm font-semibold ${cls.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700"}`}>
-                            {cls.status || "-"}
+                          <div className="font-semibold text-lg">{cls.class_name || ''}{cls.level ? ` - ${cls.level}` : ""}</div>
+                          <span className={`rounded-full px-4 py-2 text-sm font-semibold ${String(cls.status || '').toLowerCase() === 'inactive' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                            {cls.status || ''}
                           </span>
                         </div>
-                        <div className="text-xs text-gray-500 mb-2">{cls.instructor || "-"}</div>
+                        <div className="text-xs text-gray-500 mb-2">{cls.instructor || ''}</div>
                         <div className="flex gap-8 mt-2">
                           <div>
                             <div className="flex items-center gap-1 text-xs text-gray-400">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 6v6l4 2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                               <span className="text-xs">Duration</span>
                             </div>
-                            <div className="text-sm text-black">{cls.duration || "-"}</div>
+                            <div className="text-sm text-black">{cls.duration || ''}</div>
                           </div>
                           <div>
                             <div className="flex items-center gap-1 text-xs text-gray-400">
                               <FaCalendarAlt className="w-4 h-4" />
                               <span className="text-xs">Frequency</span>
                             </div>
-                            <div className="text-sm text-black">{cls.frequency || "-"}</div>
+                            <div className="text-sm text-black">{formatFrequency(cls.frequency) || ''}</div>
                           </div>
                         </div>
                       </div>
@@ -438,10 +482,10 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
             {(Array.isArray(localProfile.activityLog) && localProfile.activityLog.length > 0) ? (
               <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-4">
                 {localProfile.activityLog.map((act: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between bg-gray-100 rounded-md px-3 py-4">
+                  <div key={act.id || idx} className="flex items-center justify-between bg-gray-100 rounded-md px-3 py-4">
                     <div>
-                      <div className="font-semibold text-black">{act.type || act.title || "-"}</div>
-                      <div className="text-xs text-gray-500">{act.date || "-"}</div>
+                      <div className="font-semibold text-black capitalize">{act.type || act.title || act.message || ''}</div>
+                      <div className="text-xs text-gray-500">{formatDate(act.createdAt || act.created_at || act.date)}</div>
                     </div>
                   </div>
                 ))}

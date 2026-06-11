@@ -13,6 +13,8 @@ import SubscriptionTab from "@/components/users/AdminProfile/SubscriptionTab"
 import SubscriptionSummary from "@/components/users/AdminProfile/SubscriptionSummary"
 import PaymentMethod from "@/components/users/AdminProfile/PaymentMethod"
 import ActivitiesTab from "@/components/users/AdminProfile/ActivitiesTab" 
+import { boDojoService } from '@/services/bo-dojo.service'
+import { boUsersService } from '@/services/bo-users.service'
 import Calendar from "@/components/users/AdminProfile/Calendar"
 
 
@@ -38,6 +40,16 @@ export default function AdminProfilePage() {
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [isDojoProfile, setIsDojoProfile] = useState(false);
+  const [dojoStats, setDojoStats] = useState<any>(null);
+  const [dojoInstructors, setDojoInstructors] = useState<any[]>([]);
+  const [dojoClasses, setDojoClasses] = useState<any[]>([]);
+  const [dojoParents, setDojoParents] = useState<any[]>([]);
+  const [dojoStudents, setDojoStudents] = useState<any[]>([]);
+  const [dojoSchedule, setDojoSchedule] = useState<any[]>([]);
+  const [dojoSubscription, setDojoSubscription] = useState<any>(null);
+  const [dojoBilling, setDojoBilling] = useState<any[]>([]);
+  const [dojoActivities, setDojoActivities] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -50,25 +62,59 @@ export default function AdminProfilePage() {
         return;
       }
       try {
-        // Get email by id
-        const resUsers = await fetch("https://www.backoffice-api.dojoconnect.app/get_users");
-        if (!resUsers.ok) throw new Error("Failed to fetch users");
-        const usersData = await resUsers.json();
-        const user = usersData.data.find((u: any) => String(u.id) === String(id));
-        if (!user?.email) {
-          setProfile(null);
-          setEmail(null);
-          setLoading(false);
-          setError("User not found.");
-          return;
+        // First try treating the id as a dojoId and fetch dojo profile
+        try {
+          const dojoResp = await boDojoService.getDojoProfile(String(id));
+          if (dojoResp) {
+            setProfile(dojoResp);
+            setIsDojoProfile(true);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          // not a dojoId or dojo not found - fallthrough to user-based lookup
         }
-        setEmail(user.email);
 
-        // Get detailed profile (role-specific)
-        const resProfile = await fetch(`https://apis.dojoconnect.app/user_profile_detailed/${user.email}`);
-        if (!resProfile.ok) throw new Error("Profile not found for this email.");
-        const profileData = await resProfile.json();
-        setProfile(profileData.data);
+        // Fallback: get user from list and build profile from available data
+        try {
+          let user = await boUsersService.getUserById(String(id));
+          if (!user) {
+            try {
+              const resUsers = await boUsersService.listUsers({ role: 'all', page: 1, limit: 1000 });
+              const usersArr = Array.isArray(resUsers.data) ? resUsers.data : [];
+              user = usersArr.find((u: any) => String(u.id) === String(id)) || null;
+            } catch (listErr) {
+              // ignore
+            }
+          }
+
+          if (!user) {
+            setProfile(null);
+            setLoading(false);
+            setError("User not found.");
+            return;
+          }
+
+          setEmail(user.email);
+          // Build profile directly from user list data — no separate detailed endpoint needed
+          setProfile({
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            name: `${user.firstName} ${user.lastName}`.trim(),
+            email: user.email,
+            role: user.role,
+            status: user.status,
+            avatarUrl: user.avatarUrl,
+            joinedDate: user.joinedDate,
+            lastActivity: user.lastActivity,
+          });
+          setIsDojoProfile(false);
+          setLoading(false);
+          return;
+        } catch (e) {
+          throw e;
+        }
       } catch (err: any) {
         setError(err.message || "An error occurred.");
         setProfile(null);
@@ -79,9 +125,59 @@ export default function AdminProfilePage() {
     fetchProfile();
   }, [id]);
 
+  // Lazy load dojo-specific tab data when we have a dojo profile or when profile contains dojoId
+  useEffect(() => {
+    async function loadDojoTabData() {
+      if (!id) return;
+      // determine dojoId
+      const dojoId = isDojoProfile ? String(id) : (profile?.dojoId || profile?.linkedDojo?.dojoId || profile?.ownerId);
+      if (!dojoId) return;
+      try {
+        if (activeTab === 'Overview') {
+          const stats = await boDojoService.getDojoStats(dojoId);
+          setDojoStats(stats || null);
+        }
+        if (activeTab === 'Instructors') {
+          const res = await boDojoService.getDojoInstructors(dojoId);
+          setDojoInstructors(res.data || []);
+        }
+        if (activeTab === 'Classes') {
+          const res = await boDojoService.getDojoClasses(dojoId);
+          setDojoClasses(res.data || []);
+        }
+        if (activeTab === 'Parents') {
+          const res = await boDojoService.getDojoParents(dojoId);
+          setDojoParents(res.data || []);
+        }
+        if (activeTab === 'Students') {
+          const res = await boDojoService.getDojoStudents(dojoId);
+          setDojoStudents(res.data || []);
+        }
+        if (activeTab === 'Calendar') {
+          const res = await boDojoService.getDojoSchedule(dojoId);
+          setDojoSchedule(res || []);
+        }
+        if (activeTab === 'Subscription') {
+          const res = await boDojoService.getDojoSubscription(dojoId);
+          setDojoSubscription(res || null);
+          const billing = await boDojoService.getDojoBillingHistory(dojoId);
+          setDojoBilling(billing.data || []);
+        }
+        if (activeTab === 'Activities') {
+          const res = await boDojoService.getDojoActivities(dojoId);
+          setDojoActivities(res.data || []);
+        }
+      } catch (err) {
+        console.error('Failed to load dojo tab data', err);
+      }
+    }
+    loadDojoTabData();
+  }, [activeTab, id, isDojoProfile, profile]);
+
   if (loading) return <MainLayout><div>Loading...</div></MainLayout>;
   if (!profile) return <MainLayout><div>{error}</div></MainLayout>;
-  if ((profile.role || profile.userType) !== "admin") {
+  const profileRole = (profile.role || profile.userType || '').toLowerCase();
+  if (!isDojoProfile && !['admin', 'dojo_owner'].includes(profileRole)) {
     return <MainLayout><div>Not an Admin profile</div></MainLayout>;
   }
 
@@ -90,21 +186,21 @@ export default function AdminProfilePage() {
       <div className="p-6">
         <ProfileHeader profile={profile} onBack={() => router.push('/dashboard?tab=users')} />
         <ProfileTabs tabs={[...tabs]} activeTab={activeTab} setActiveTab={setActiveTab} />
-        {activeTab === "Overview" && <ProfileOverview profile={profile} />}
+        {activeTab === "Overview" && <ProfileOverview profile={profile} dojoStats={dojoStats} />}
         {activeTab === "Instructors" && (
-          <InstructorsTab instructors={profile.overview_metrics?.total_instructors || 0} />
+          <InstructorsTab instructors={dojoInstructors.length ? dojoInstructors : (profile.overview_metrics?.total_instructors || 0)} />
         )}
         {activeTab === "Classes" && (
-          <ClassesTab classes={profile.owned_classes || []} />
+          <ClassesTab classes={dojoClasses.length ? dojoClasses : (profile.owned_classes || [])} />
         )}
       {activeTab === "Parents" && (
-  <ParentsTab parents={profile.parents || []} />
+  <ParentsTab parents={dojoParents.length ? dojoParents : (profile.parents || [])} />
 )}
         {activeTab === "Students" && (
-  <StudentsTab students={profile.students || []} />
+  <StudentsTab students={dojoStudents.length ? dojoStudents : (profile.students || [])} />
 )}
         {activeTab === "Calendar" && (
-          <Calendar events={profile.calendars || []} />
+          <Calendar events={dojoSchedule.length ? dojoSchedule : (profile.calendars || [])} />
         )}
           {activeTab === "Subscription" && (
           <>
@@ -117,8 +213,8 @@ export default function AdminProfilePage() {
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <SubscriptionSummary summary={profile.subscription_status} />
-                  <PaymentMethod method={profile.payment_method} />
+                  <SubscriptionSummary summary={dojoSubscription || profile.subscription_status} />
+                    <PaymentMethod method={profile.payment_method || (dojoSubscription?.card || {})} />
                 </div>
                 <div className="mt-8">
                   <div className="flex items-center justify-between bg-gray-100 px-4 py-3 rounded-md mb-2">
@@ -131,7 +227,7 @@ export default function AdminProfilePage() {
                     </button>
                   </div>
                   <div className="mt-4">
-                    <SubscriptionTab data={profile.subscription_history} />
+                    <SubscriptionTab data={dojoBilling.length ? dojoBilling : (profile.subscription_history || [])} />
                   </div>
                 </div>
               </>

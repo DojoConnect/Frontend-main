@@ -1,6 +1,9 @@
 import React from 'react';
 import { FaEllipsisV } from "react-icons/fa";
 import { useRouter } from 'next/navigation';
+import { formatDateCustom } from '@/lib/dateFormatter';
+import Avatar from '@/components/ui/Avatar';
+import { resolveImageUrl } from '@/lib/imageUrl';
 
 interface Instructor {
   name: string;
@@ -66,45 +69,32 @@ const ClassesTable: React.FC<ClassesTableProps> = ({ classes, loading }) => {
               </td>
               <td className="px-1 py-2 md:px-4 md:py-3 align-middle">
                 <div className="flex items-center gap-1 md:gap-2">
-                  <img
-                    src={c.classImg}
-                    alt={c.className}
-                    className="w-6 h-6 md:w-8 md:h-8 rounded-full object-cover"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
+                  {/* class image kept as-is when needed; if it's a person avatar use Avatar instead */}
+                  {(
+                    resolveImageUrl(c) || c.classImg
+                  ) ? (
+                    <Avatar src={resolveImageUrl(c) || c.classImg} alt={c.className} size={32} className="w-6 h-6 md:w-8 md:h-8 rounded-full object-cover" />
+                  ) : null}
                   <span className="ml-1 md:ml-2 truncate">{c.className}</span>
                 </div>
               </td>
-              <td className="px-1 py-2 md:px-4 md:py-3 align-middle">{c.classLevel}</td>
+              <td className="px-1 py-2 md:px-4 md:py-3 align-middle">{c.classLevel || ''}</td>
               <td className="px-1 py-2 md:px-4 md:py-3 align-middle">
                 <div className="flex items-center gap-1 md:gap-2">
-                  <img
-                    src={c.instructor.avatar}
-                    alt={c.instructor.name}
-                    className="w-6 h-6 md:w-8 md:h-8 rounded-full object-cover"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                  <span className="ml-1 md:ml-2 truncate">{c.instructor.name}</span>
+                  <Avatar src={c.instructor?.avatar || (c.instructor && resolveImageUrl(c.instructor))} alt={c.instructor?.name} size={32} className="w-6 h-6 md:w-8 md:h-8 rounded-full object-cover" />
+                  <span className="ml-1 md:ml-2 truncate">{c.instructor?.name || ''}</span>
                 </div>
               </td>
               <td className="px-1 py-2 md:px-4 md:py-3 align-middle">{c.enrolledStudents}</td>
               <td className="px-1 py-2 md:px-4 md:py-3 align-middle">
-                {c.dateCreated
-                  ? new Date(c.dateCreated).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })
-                  : "-"}
+                {c.dateCreated ? formatDateCustom(c.dateCreated) : ''}
               </td>
               <td className="px-1 py-2 md:px-4 md:py-3 align-middle">
-                <span className={`px-2 py-1 rounded text-xs font-semibold
-                  ${c.status === "Active"
-                    ? "bg-green-100 text-green-600"
-                    : "bg-red-100 text-red-600"}`}>
-                  {c.status}
-                </span>
+                {c.status ? (
+                  <span className={`px-2 py-1 rounded text-xs font-semibold ${String(c.status).toLowerCase() === 'inactive' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                    {c.status}
+                  </span>
+                ) : ''}
               </td>
               <td className="px-1 py-2 md:px-4 md:py-3 align-middle text-right">
                 <span className="bg-white border border-gray-200 rounded p-1">

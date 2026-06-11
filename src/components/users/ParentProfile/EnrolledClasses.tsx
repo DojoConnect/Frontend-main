@@ -1,4 +1,7 @@
-import { FaCalendarAlt } from 'react-icons/fa';
+import { FaCalendarAlt, FaRegClock } from 'react-icons/fa';
+import CloudinaryImage from '@/components/ui/CloudinaryImage';
+import Avatar from '@/components/ui/Avatar';
+import { formatDateCustom } from '@/lib/dateFormatter';
 
 
 type EnrolledClassesProps = {
@@ -6,7 +9,7 @@ type EnrolledClassesProps = {
 };
 
 const EnrolledClasses: React.FC<EnrolledClassesProps> = ({ classesData }) => {
-  const hasClasses = classesData.length > 0;
+  const hasClasses = Array.isArray(classesData) && classesData.length > 0;
 
   return (
     <div>
@@ -23,37 +26,49 @@ const EnrolledClasses: React.FC<EnrolledClassesProps> = ({ classesData }) => {
       </div>
       {hasClasses ? (
         <div className="bg-white rounded-md p-4 flex flex-col gap-4">
-          {classesData.slice(0, 2).map((cls) => (
-            <div key={cls.id} className="bg-white-100 rounded-md p-4 flex flex-col gap-2">
+          {classesData.slice(0, 2).map((cls: any) => (
+            <div key={cls.id || cls.enrollmentId} className="bg-white-100 rounded-md p-4 flex flex-col gap-2">
               <div className="flex items-center gap-4">
-                <img
-                  src={cls.classImg}
-                  alt="Class"
-                  className="w-14 h-14 rounded-md object-cover"
-                />
+                {(cls.imagePublicId || cls.public_id || cls.image_public_id || cls.avatarPublicId) ? (
+                  <CloudinaryImage
+                    publicId={cls.imagePublicId || cls.public_id || cls.image_public_id || cls.avatarPublicId}
+                    alt={cls.className || cls.class_name || ''}
+                    width={48}
+                    height={48}
+                    className="w-12 h-12 sm:w-14 sm:h-14 rounded-md"
+                  />
+                ) : (
+                  <Avatar
+                    src={null}
+                    alt={cls.className || cls.class_name || ''}
+                    size={48}
+                    className="w-12 h-12 sm:w-14 sm:h-14 rounded-md"
+                  />
+                )}
                 <div>
-                  <div className="font-bold text-base">
-                    {cls.className} - {cls.classLevel} Class
+                  <div className="font-bold text-sm sm:text-base">
+                    {cls.className || cls.class_name || ''}{' '}
+                    {cls.classLevel || cls.level ? `- ${cls.classLevel || cls.level}` : ''}
                   </div>
-                  <div className="text-gray-500 text-sm">
-                    Instructor {cls.instructor.name}
+                  <div className="text-gray-500 text-xs sm:text-sm">
+                    {cls.instructorName || (cls.instructor && (cls.instructor.name || cls.instructor)) || ''}
                   </div>
                 </div>
               </div>
-              <div className="flex gap-8 mt-2 text-xs text-gray-600">
+              <div className="flex gap-8 mt-2 text-xs sm:text-sm text-gray-600">
                 <div className="flex flex-col items-start">
                   <div className="flex items-center gap-1">
-                    <FaCalendarAlt className="w-3 h-3" />
-                    <span>Enrolled</span>
+                    <FaRegClock className="w-3 h-3" />
+                    <span>Duration</span>
                   </div>
-                  <span>{cls.enrollmentDate}</span>
+                  <span>{cls.duration ? String(cls.duration) : ''}</span>
                 </div>
                 <div className="flex flex-col items-start">
                   <div className="flex items-center gap-1">
                     <FaCalendarAlt className="w-3 h-3" />
-                    <span>Status</span>
+                    <span>Frequency</span>
                   </div>
-                  <span>{cls.status}</span>
+                  <span>{cls.frequency ? String(cls.frequency).replace(/_/g, ' ') : ''}</span>
                 </div>
               </div>
             </div>

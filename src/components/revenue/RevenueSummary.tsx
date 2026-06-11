@@ -2,6 +2,14 @@
 import React, { useEffect, useState } from "react";
 import { ReadMoreIcon, IconA, IconB, IconC, IconD, IconE, IconF } from './revenueData';
 import { FaArrowUp } from "react-icons/fa";
+import { boDashboardService } from '../../services/bo-dashboard.service';
+
+// Small green badge used by dashboard metric cards
+const GreenBadge = ({ value }: { value: string | number }) => (
+  <span className="ml-auto rounded-full bg-green-100 text-green-700 px-3 py-1 text-xs font-semibold">
+    {value ?? "0%"}
+  </span>
+);
 
 type RevenueSummaryProps = {
   filter: string;
@@ -13,39 +21,39 @@ function mapApiToCards(api: any) {
   return [
     {
       label: 'Total Revenue',
-      value: api.total_revenue ? `£${api.total_revenue}` : '£0',
-      status: api.revenue_change ? `${api.revenue_change}` : '',
+      value: api.totalRevenue ? `£${api.totalRevenue}` : '£0',
+      status: api.revenueChange ? `${api.revenueChange}` : (api.revenue_change ? `${api.revenue_change}` : ''),
       icon: <IconE />,
     },
     {
       label: 'Avg. Revenue per Dojo',
-      value: api.avg_revenue_per_dojo ? `£${api.avg_revenue_per_dojo}` : '£0',
-      status: api.avg_revenue_change ? `${api.avg_revenue_change}` : '',
+      value: api.avgRevenuePerDojo ? `£${api.avgRevenuePerDojo}` : (api.avg_revenue_per_dojo ? `£${api.avg_revenue_per_dojo}` : '£0'),
+      status: api.avgRevenueChange ? `${api.avgRevenueChange}` : (api.avg_revenue_change ? `${api.avg_revenue_change}` : ''),
       icon: <IconE />,
     },
     {
       label: 'Gross Transaction Vol.',
-      value: api.gross_transaction_volume ? `£${api.gross_transaction_volume}` : '£0',
-      status: api.gross_transaction_change ? `${api.gross_transaction_change}` : '',
+      value: api.grossTransactionVolume ? `£${api.grossTransactionVolume}` : (api.gross_transaction_volume ? `£${api.gross_transaction_volume}` : '£0'),
+      status: api.grossTransactionChange ? `${api.grossTransactionChange}` : (api.gross_transaction_change ? `${api.gross_transaction_change}` : ''),
       icon: <IconF />,
       chartImg: '/chart.svg',
     },
     {
       label: 'Total Dojo Owners',
-      value: api.total_dojo_owners ?? '0',
-      status: api.active_dojo_owners ? `${api.active_dojo_owners} active` : '',
+      value: api.totalDojoOwners ?? api.total_dojo_owners ?? '0',
+      status: api.activeDojoOwners ? `${api.activeDojoOwners} active` : (api.active_dojo_owners ? `${api.active_dojo_owners} active` : ''),
       icon: <IconA />,
     },
     {
       label: 'Active Subscriptions',
-      value: api.active_subscriptions ?? '0',
-      status: api.active_subscriptions_percent ? `${api.active_subscriptions_percent} of total` : '',
+      value: api.activeSubscriptions ?? api.active_subscriptions ?? '0',
+      status: api.activeSubscriptionsPercent ? `${api.activeSubscriptionsPercent} of total` : (api.active_subscriptions_percent ? `${api.active_subscriptions_percent} of total` : ''),
       icon: <IconB />,
     },
     {
       label: 'Canceled Subscriptions',
-      value: api.canceled_subscriptions ?? '0',
-      status: api.canceled_subscriptions_percent ? `${api.canceled_subscriptions_percent} of ${api.total_dojo_owners}` : '',
+      value: api.cancelledSubscriptions ?? api.canceled_subscriptions ?? '0',
+      status: api.cancelledSubscriptionsPercent ? `${api.cancelledSubscriptionsPercent} of ${api.totalDojoOwners || api.total_dojo_owners}` : (api.canceled_subscriptions_percent ? `${api.canceled_subscriptions_percent} of ${api.total_dojo_owners}` : ''),
       icon: <IconC />,
     },
   ];
@@ -56,6 +64,7 @@ export default function RevenueSummary({ filter, customRange }: RevenueSummaryPr
   const [stats, setStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dojos, setDojos] = useState<any[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -81,28 +90,20 @@ export default function RevenueSummary({ filter, customRange }: RevenueSummaryPr
       if (payload[k] === undefined) delete payload[k];
     });
 
-    fetch("https://apis.dojoconnect.app/metrics/revenue", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Server error: ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        if (data && data.success && data.data) {
-          setStats(mapApiToCards(data.data));
-        } else {
-          setStats([]);
-          setError(data?.error || "No data returned");
-        }
+    // Use backoffice dashboard revenue summary (avoids external metrics CORS issues)
+    boDashboardService
+      .getRevenueSummary()
+      .then((resp) => {
+        const data = resp.data || {};
+        setStats(mapApiToCards(data));
       })
       .catch((err) => {
         setStats([]);
-        setError(err.message || "Network error");
+        setError(err.message || 'Failed to fetch revenue summary');
       })
       .finally(() => setLoading(false));
+
+    // (removed dojos breakdown fetch per UX request)
   }, [filter, customRange]);
 
   return (
@@ -111,44 +112,29 @@ export default function RevenueSummary({ filter, customRange }: RevenueSummaryPr
       
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ">
           {stats.map(({ label, value, status, icon, chartImg }) => (
-            <div key={label} className="bg-gray-50 flex flex-col justify-between rounded-lg p-4 h-[135px] shadow-sm relative">
-              <div style={{ border: "1px solid #FCC2C3" }} className="h-8 w-8 rounded-full bg-[#FFE5E5] flex items-center justify-center">
-                {icon}
+            <div key={label} className="bg-gray-50 flex flex-col rounded-lg p-4 h-[130px] shadow-sm relative w-full">
+              <div className="flex items-center mb-2">
+                <span style={{ border: "1px solid #FCC2C3" }} className="h-8 w-8 rounded-full bg-[#FFE5E5] flex items-center justify-center">
+                  {icon}
+                </span>
               </div>
-              <div>
-                <div className="flex mb-1">
-                  <div className="text-xl text-[#0F1828] font-semibold">{value}</div>
-                </div>
-                <div className="flex flex-wrap justify-between">
-                  <div className="text-sm text-gray-600">{label}</div>
-                  {chartImg && (
-                    <img
-                      src={chartImg}
-                      alt="Chart"
-                      className="mx-5 h-6 w-auto"
-                      style={{ display: 'inline-block' }}
-                    />
-                  )}
-                  {status && (
-                    <div className="flex items-center px-2 py-0.5 rounded bg-[#E6F4EA]">
-                      <span className="mr-1 text-sm font-semibold text-[#15803D]">
-                        <FaArrowUp />
-                      </span>
-                      <span className="text-sm font-semibold text-[#15803D]">{status}</span>
-                    </div>
-                  )}
-                </div>
-                <button
-                  className="absolute top-4 right-4"
-                  onClick={() => setOpenModal(label)}
-                  aria-label="Open details"
-                >
-                  <ReadMoreIcon />
-                </button>
+              <div className="text-lg text-[#0F1828] font-semibold mb-2">{value ?? 0}</div>
+              <div className="flex items-center justify-between mt-auto w-full">
+                <span className="text-xs text-gray-600">{label}</span>
+                {status ? <GreenBadge value={status} /> : null}
               </div>
+              <button
+                className="absolute top-4 right-4 cursor-pointer"
+                onClick={() => setOpenModal(label)}
+                aria-label="Open details"
+              >
+                <ReadMoreIcon />
+              </button>
             </div>
           ))}
         </div>
+
+        {/* Dojos revenue breakdown removed */}
     </div>
   );
 }

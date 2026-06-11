@@ -2,19 +2,8 @@ import React, { useState } from "react";
 import { FaEllipsisV } from "react-icons/fa";
 import SearchActionBar from "./SearchActionBar";
 import Pagination from "./Pagination";
-
-// Helper: format date as 'Day, Month Date, Year'
-const formatDate = (dateStr?: string | null) => {
-  if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+import { formatDateCustom } from '@/lib/dateFormatter';
+import Avatar from '@/components/ui/Avatar';
 
 export default function AssignedClassesTable({ assignedClasses }: { assignedClasses: any[] }) {
   const [page, setPage] = useState(1);
@@ -47,42 +36,89 @@ export default function AssignedClassesTable({ assignedClasses }: { assignedClas
       ) : (
         <>
           <SearchActionBar />
-          <div className="bg-white rounded-md border border-gray-200 p-4">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-100 rounded-md">
-                  <th className="p-3 rounded-l-md text-left">Class Name</th>
-                  <th className="p-3 text-left">Class Level</th>
-                  <th className="p-3 text-left">Enrolled Students</th>
-                  <th className="p-3 text-left">Date Assigned</th>
-                  <th className="p-3 text-left">Status</th>
-                  <th className="p-3 rounded-r-md text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedClasses.map((cls, idx) => (
-                  <tr key={cls.class_uid || cls.id || idx} className="border-b">
-                    <td className="p-3 flex items-center gap-2">
-                      <img src={`/${cls.image_path || "classImage.png"}`} alt={cls.class_name} className="w-10 h-10 rounded-md" />
-                      <span>{cls.class_name}</span>
-                    </td>
-                    <td className="p-3">{cls.level}</td>
-                    <td className="p-3">{cls.capacity}</td>
-                    <td className="p-3">{formatDate(cls.created_at)}</td>
-                    <td className="p-3">
-                      <span className="rounded-full px-3 py-1 text-xs font-semibold bg-green-100 text-green-700">
-                        {cls.status}
-                      </span>
-                    </td>
-                    <td className="p-3 text-center">
-                      <div className="flex justify-center items-center gap-2">
+          <div>
+            {/* Desktop table */}
+            <div className="hidden md:block bg-white rounded-md border border-gray-200 p-4">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-100 rounded-md">
+                    <th className="p-3 rounded-l-md text-left">Class Name</th>
+                    <th className="p-3 text-left">Class Level</th>
+                    <th className="p-3 text-left">Enrolled Students</th>
+                    <th className="p-3 text-left">Date Assigned</th>
+                    <th className="p-3 text-left">Status</th>
+                    <th className="p-3 rounded-r-md text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedClasses.map((cls, idx) => {
+                    const base = process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL || '';
+                    const imgField = cls.image_path || cls.image || cls.imageUrl || cls.image_url || cls.imagePublicId || cls.avatarPublicId || cls.avatar_public_id;
+                    let imgSrc: string | undefined = undefined;
+                    if (imgField && typeof imgField === 'string') {
+                      if (imgField.startsWith('http')) imgSrc = imgField;
+                      else if (imgField.includes('/')) imgSrc = `${base}/${imgField}`;
+                      else imgSrc = `${base}/images/${imgField}`;
+                    }
+                    return (
+                      <tr key={cls.class_uid || cls.id || idx} className="border-b">
+                            <td className="p-3 flex items-center gap-2">
+                              <Avatar src={imgSrc} alt={cls.class_name || cls.name || cls.dojoName || cls.dojo_name || 'class'} size={40} className="rounded-md" />
+                              <span className="capitalize text-sm md:text-base">{cls.class_name || cls.name || cls.dojoName || cls.dojo_name || ''}</span>
+                            </td>
+                            <td className="p-3 text-xs md:text-sm">{cls.level}</td>
+                            <td className="p-3 text-xs md:text-sm">{cls.capacity}</td>
+                            <td className="p-3 text-xs md:text-sm">{formatDateCustom(cls.assignedAt || cls.assigned_at || (cls.assigned_dates && cls.assigned_dates[0]) || cls.created_at || cls.createdAt)}</td>
+                            <td className="p-3">
+                              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${String(cls.status || '').toLowerCase() === 'inactive' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                                {cls.status}
+                              </span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="flex justify-center items-center gap-2">
+                                <FaEllipsisV className="border border-gray-300 rounded-md p-1 bg-white text-gray-400" />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile list */}
+            <div className="md:hidden space-y-3">
+              {pagedClasses.map((cls, idx) => {
+                const base = process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL || '';
+                const imgField = cls.image_path || cls.image || cls.imageUrl || cls.image_url || cls.imagePublicId || cls.avatarPublicId || cls.avatar_public_id;
+                let imgSrc: string | undefined = undefined;
+                if (imgField && typeof imgField === 'string') {
+                  if (imgField.startsWith('http')) imgSrc = imgField;
+                  else if (imgField.includes('/')) imgSrc = `${base}/${imgField}`;
+                  else imgSrc = `${base}/images/${imgField}`;
+                }
+                return (
+                  <div key={cls.class_uid || cls.id || idx} className="bg-white border border-gray-200 rounded-md p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar src={imgSrc} alt={cls.class_name || cls.name || 'class'} size={40} />
+                      <div className="flex flex-col">
+                        <div className="font-semibold text-sm md:text-base capitalize">{cls.class_name || cls.name || ''}</div>
+                        <div className="text-gray-500 text-xs md:text-sm">Level: {cls.level || ''}</div>
+                        <div className="text-gray-500 text-xs md:text-sm">Assigned: {formatDateCustom(cls.assignedAt || cls.assigned_at || (cls.assigned_dates && cls.assigned_dates[0]) || cls.created_at || cls.createdAt)}</div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="text-sm">
+                        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${String(cls.status || '').toLowerCase() === 'inactive' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>{cls.status}</span>
+                      </div>
+                      <div>
                         <FaEllipsisV className="border border-gray-300 rounded-md p-1 bg-white text-gray-400" />
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <Pagination
             totalRows={assignedClasses.length}

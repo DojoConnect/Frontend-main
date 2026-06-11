@@ -44,7 +44,7 @@ export interface RefreshResponse {
  */
 export async function login(email: string, password: string): Promise<LoginResponse> {
   try {
-    const response = await httpBackOfficePost<LoginResponse>('/auth/login', {
+    const response = await httpBackOfficePost<LoginResponse>('/backoffice/auth/login', {
       email,
       password,
     });
@@ -66,7 +66,7 @@ export async function login(email: string, password: string): Promise<LoginRespo
  */
 export async function requestPasswordReset(email: string): Promise<AuthResponse> {
   try {
-    const response = await httpBackOfficePost<AuthResponse>('/auth/password/reset/request', {
+    const response = await httpBackOfficePost<AuthResponse>('/backoffice/auth/password/reset/request', {
       email,
     });
     return response;
@@ -85,7 +85,7 @@ export async function verifyPasswordResetOtp(
 ): Promise<AuthResponse> {
   try {
     const response = await httpBackOfficePost<AuthResponse>(
-      '/auth/password/reset/verify',
+      '/backoffice/auth/password/reset/verify',
       {
         email,
         otp,
@@ -106,7 +106,7 @@ export async function resetPassword(
   resetToken: string
 ): Promise<AuthResponse> {
   try {
-    const response = await httpBackOfficePost<AuthResponse>('/auth/password/reset', {
+    const response = await httpBackOfficePost<AuthResponse>('/backoffice/auth/password/reset', {
       newPassword,
       resetToken,
     });
@@ -122,7 +122,7 @@ export async function resetPassword(
  */
 export async function refreshAuth(refreshToken: string): Promise<RefreshResponse> {
   try {
-    const response = await httpBackOfficePost<RefreshResponse>('/auth/refresh', {
+    const response = await httpBackOfficePost<RefreshResponse>('/backoffice/auth/refresh', {
       refreshToken,
     });
 
@@ -144,7 +144,7 @@ export async function refreshAuth(refreshToken: string): Promise<RefreshResponse
  */
 export async function logout(refreshToken: string): Promise<AuthResponse> {
   try {
-    const response = await httpBackOfficePost<AuthResponse>('/auth/logout', {
+    const response = await httpBackOfficePost<AuthResponse>('/backoffice/auth/logout', {
       refreshToken,
     });
 
@@ -156,6 +156,80 @@ export async function logout(refreshToken: string): Promise<AuthResponse> {
     console.error('Logout failed:', error);
     // Clear tokens regardless of error
     clearTokens();
+    throw error;
+  }
+}
+
+/**
+ * Request email update - sends verification code to new email
+ */
+export async function requestEmailUpdate(
+  password: string,
+  newEmail: string
+): Promise<AuthResponse> {
+  try {
+    const response = await httpBackOfficePost<AuthResponse>(
+      '/backoffice/auth/email/update/request',
+      {
+        password,
+        newEmail,
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error('Email update request failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Verify email update with OTP
+ */
+export async function verifyEmailUpdate(otp: string): Promise<AuthResponse> {
+  try {
+    const response = await httpBackOfficePost<AuthResponse>(
+      '/backoffice/auth/email/update/verify',
+      {
+        otp,
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error('Email update verification failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Request email verification - sends code to current email
+ */
+export async function requestEmailVerification(): Promise<AuthResponse> {
+  try {
+    const response = await httpBackOfficePost<AuthResponse>(
+      '/backoffice/auth/email/verification/request',
+      {}
+    );
+    return response;
+  } catch (error) {
+    console.error('Email verification request failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Confirm email verification with OTP
+ */
+export async function confirmEmailVerification(otp: string): Promise<AuthResponse> {
+  try {
+    const response = await httpBackOfficePost<AuthResponse>(
+      '/backoffice/auth/email/verification/confirm',
+      {
+        otp,
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error('Email verification confirmation failed:', error);
     throw error;
   }
 }

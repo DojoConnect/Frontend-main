@@ -34,33 +34,51 @@ export function clearTokens(): void {
 }
 
 export async function refreshStoredToken(): Promise<string | null> {
-  try {
-    const refreshToken = getStoredRefreshToken();
-    if (!refreshToken) {
+  // Use a module-level promise to ensure only one refresh request runs at a time
+  // This prevents multiple concurrent 401s from creating a refresh storm.
+  // eslint-disable-next-line no-var
+  if ((globalThis as any).__dojoconnect_refresh_promise) {
+    return (globalThis as any).__dojoconnect_refresh_promise as Promise<string | null>;
+  }
+
+  const refreshFlow = (async (): Promise<string | null> => {
+    try {
+      const refreshToken = getStoredRefreshToken();
+      if (!refreshToken) {
+        clearTokens();
+        return null;
+      }
+
+      // Import back-office http client here to avoid circular dependency
+      const { httpBackOffice } = await import('@/services/http');
+
+      const response = await httpBackOffice.post<{
+        data: { accessToken: string; refreshToken: string };
+        message: string;
+      }>('/backoffice/auth/refresh', { refreshToken });
+
+      if (response.data?.accessToken && response.data?.refreshToken) {
+        storeTokens(response.data.accessToken, response.data.refreshToken);
+        return response.data.accessToken;
+      }
+
       clearTokens();
       return null;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      clearTokens();
+      return null;
+    } finally {
+      // clear the global promise once done
+      try {
+        delete (globalThis as any).__dojoconnect_refresh_promise;
+      } catch {}
     }
+  })();
 
-    // Import here to avoid circular dependency
-    const { httpClient } = await import('@/services/http');
-    
-    const response = await httpClient.post<{
-      data: { accessToken: string; refreshToken: string };
-      message: string;
-    }>('/auth/refresh', { refreshToken });
-
-    if (response.data?.accessToken && response.data?.refreshToken) {
-      storeTokens(response.data.accessToken, response.data.refreshToken);
-      return response.data.accessToken;
-    }
-
-    clearTokens();
-    return null;
-  } catch (error) {
-    console.error('Token refresh failed:', error);
-    clearTokens();
-    return null;
-  }
+  // store promise globally so concurrent callers can await it
+  (globalThis as any).__dojoconnect_refresh_promise = refreshFlow;
+  return refreshFlow;
 }
 
 export function isTokenExpired(token: string): boolean {

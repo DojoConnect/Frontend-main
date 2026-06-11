@@ -13,7 +13,7 @@ import AttendanceTab from "@/components/classes/ClassProfile/Attendance";
 import SubscriptionTab from "@/components/classes/ClassProfile/Subscription";
 import ActivitiesTable from "@/components/classes/ClassProfile/Activities";
 import ClassScheduleCalendar from "@/components/classes/ClassProfile/Calendar";
-import { transformScheduleToCalendar } from "@/components/classes/ClassProfile/transformScheduleToCalendar";
+import { boClassesService } from '@/services/bo-classes.service'
 
 export default function ClassDetailPage() {
   const { id } = useParams() as { id: string };
@@ -21,6 +21,15 @@ export default function ClassDetailPage() {
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Tab data
+  const [classStudents, setClassStudents] = useState<any[]>([]);
+  const [attendanceSummary, setAttendanceSummary] = useState<any>(null);
+  const [attendanceRows, setAttendanceRows] = useState<any[]>([]);
+  const [subscriptionSummary, setSubscriptionSummary] = useState<any>(null);
+  const [billingHistory, setBillingHistory] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [classSchedule, setClassSchedule] = useState<any[]>([]);
 
   // Pagination state
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
@@ -43,22 +52,13 @@ export default function ClassDetailPage() {
     async function fetchClassProfile() {
       setLoading(true);
       try {
-        const res = await fetch(`https://apis.dojoconnect.app/class_profile/${id}`);
-        const data = await res.json();
-        if (data && data.success && data.data && data.data.class_info) {
-          setProfile({
-            ...data.data.class_info,
-            enrolled_students: data.data.enrolled_students || [],
-            attendance_summary: data.data.attendance_summary || {},
-            attendance_rows: data.data.attendance_rows || [],
-            subscription_info: data.data.subscription_info || {},
-            billing_history: data.data.billing_history || [],
-            recent_activities: data.data.recent_activities || [],
-            class_schedule: data.data.class_schedule || [],
-          });
-        } else {
-          setProfile(null);
-        }
+        const details = await boClassesService.getClassDetails(id);
+        setProfile(details || null);
+        // prefill simple arrays if present on details
+        setClassStudents([]);
+        setAttendanceRows([]);
+        setRecentActivities([]);
+        setClassSchedule([]);
       } catch (err) {
         setProfile(null);
       }
@@ -67,6 +67,47 @@ export default function ClassDetailPage() {
 
     fetchClassProfile();
   }, [id]);
+
+  // Lazy-load data for active tab
+  useEffect(() => {
+    if (!id) return;
+    async function loadTabData() {
+      try {
+        if (activeTab === 'Enrolled Student') {
+          const res = await boClassesService.getClassStudents(id, { page: 1, limit: 100 });
+          setClassStudents((res.data || []).map((s: any) => ({
+            ...s,
+            name: `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.name || '',
+            avatar: s.avatarUrl || s.avatar || null,
+            lastActivityDate: s.lastActivityDate || null,
+          })));
+        }
+        if (activeTab === 'Class Schedule') {
+          const res = await boClassesService.getClassSchedule(id);
+          setClassSchedule(res || []);
+        }
+        if (activeTab === 'Attendance') {
+          const res = await boClassesService.getClassAttendanceSummary(id);
+          setAttendanceSummary(res || null);
+          const history = await boClassesService.getClassAttendanceHistory(id, { page: 1, limit: 100 });
+          setAttendanceRows(history.data || []);
+        }
+        if (activeTab === 'Subscription') {
+          const res = await boClassesService.getClassSubscriptionSummary(id);
+          setSubscriptionSummary(res || null);
+          const billing = await boClassesService.getClassPaymentHistory(id, { page: 1, limit: 100 });
+          setBillingHistory(billing.data || []);
+        }
+        if (activeTab === 'Activities') {
+          const res = await boClassesService.getClassActivities(id, { page: 1, limit: 100 });
+          setRecentActivities(res.data || []);
+        }
+      } catch (err) {
+        console.error('Failed to load class tab data', err);
+      }
+    }
+    loadTabData();
+  }, [activeTab, id]);
 
   if (loading) {
     return <MainLayout><div>Loading...</div></MainLayout>;
@@ -81,23 +122,26 @@ export default function ClassDetailPage() {
       <div className="p-3 sm:p-6">
         <ProfileHeader
           profile={{
-            className: profile.class_name,
-            classLevel: profile.level,
-            instructor: { name: profile.instructor, avatar: "/instructorImage.png" },
-            classAge: profile.age_group,
-            frequency: profile.frequency,
-            enrolledStudents: profile.enrolled_students?.length || 0,
-            location: profile.location,
-            status: profile.status,
-            dateCreated: profile.created_at,
-            classImg: profile.image_path
+            className: profile?.name || profile?.class_name,
+            classLevel: profile?.level,
+            instructor: {
+              name: profile?.instructorName || profile?.instructor,
+              avatar: profile?.instructorAvatar || profile?.instructor_img || null
+            },
+            classAge: `${profile?.minAge || ''}-${profile?.maxAge || ''}`,
+            frequency: profile?.frequency,
+            enrolledStudents: profile?.enrolledStudents || profile?.enrolled_students?.length || 0,
+            location: profile?.streetAddress || profile?.location,
+            status: profile?.status,
+            dateCreated: profile?.createdAt || profile?.created_at,
+            classImg: profile?.image_path
               ? (profile.image_path.startsWith("http")
                   ? profile.image_path
-                  : `https://backoffice-api.dojoconnect.app/${profile.image_path}`)
-              : "/classImg.jpg",
-            subscriptionType: profile.subscription,
-            subscriptionFee: profile.price,
-            gradingDate: profile.grading_date,
+                  : `${process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL}/${profile.image_path}`)
+              : null,
+            subscriptionType: profile?.subscriptionType || profile?.subscription,
+            subscriptionFee: profile?.price,
+            gradingDate: profile?.gradingDate || profile?.grading_date,
           }}
           onBack={() => router.push('/dashboard?tab=classes')}
         />
@@ -113,10 +157,10 @@ export default function ClassDetailPage() {
           {activeTab === "Enrolled Student" && (
             <>
               <div className="overflow-x-auto">
-                <EnrolledStudentsTable students={profile.enrolled_students} classId={id} />
+                <EnrolledStudentsTable students={classStudents.length ? classStudents : (profile.enrolled_students || [])} classId={id} />
               </div>
               <Pagination
-                totalRows={profile.enrolled_students?.length || 0}
+                totalRows={(classStudents.length ? classStudents.length : (profile.enrolled_students?.length || 0))}
                 rowsPerPage={rowsPerPage}
                 currentPage={page}
                 onPageChange={setPage}
@@ -125,16 +169,16 @@ export default function ClassDetailPage() {
           )}
           {activeTab === "Class Schedule" && (
             <div className="overflow-x-auto">
-              <ClassScheduleCalendar schedule={transformScheduleToCalendar(profile.class_schedule)} />
+              <ClassScheduleCalendar rawSchedule={classSchedule.length ? classSchedule : (profile.class_schedule || [])} />
             </div>
           )}
           {activeTab === "Attendance" && (
             <>
               <div className="overflow-x-auto">
-                <AttendanceTab attendance={profile.attendance_summary} rows={profile.attendance_rows} />
+                <AttendanceTab attendance={attendanceSummary || profile.attendance_summary} rows={attendanceRows.length ? attendanceRows : (profile.attendance_rows || [])} />
               </div>
               <Pagination
-                totalRows={profile.attendance_rows?.length || 0}
+                totalRows={(attendanceRows.length ? attendanceRows.length : (profile.attendance_rows?.length || 0))}
                 rowsPerPage={rowsPerPage}
                 currentPage={page}
                 onPageChange={setPage}
@@ -152,7 +196,7 @@ export default function ClassDetailPage() {
               ) : (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
-                    <SubscriptionTab subscription={profile.subscription_status} billing={profile.subscription_history || []} />
+                    <SubscriptionTab subscription={subscriptionSummary || profile.subscription_status} billing={(billingHistory.length ? billingHistory : (profile.subscription_history || []))} />
                   </div>
                   <div className="mt-6 sm:mt-8">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-100 px-3 sm:px-4 py-2 sm:py-3 rounded-md mb-2 gap-2">
@@ -178,7 +222,7 @@ export default function ClassDetailPage() {
           {activeTab === "Activities" && (
             <>
               <div className="overflow-x-auto">
-                <ActivitiesTable activities={profile.recent_activities} />
+                <ActivitiesTable activities={recentActivities.length ? recentActivities : (profile.recent_activities || [])} />
               </div>
               <Pagination
                 totalRows={profile.recent_activities?.length || 0}

@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import Avatar from '@/components/ui/Avatar';
 import { FaEllipsisV, FaEye, FaTrash, FaTimes } from "react-icons/fa";
+import { formatDateCustom } from '@/lib/dateFormatter';
 import { boUsersService } from "@/services/bo-users.service";
 
 // Define the User type or import it from the appropriate file
@@ -83,15 +85,15 @@ export default function UsersTable({ user, onUserClick, onDeleteClick, showUserT
                   <input type="checkbox" className="w-3 h-3 sm:w-4 sm:h-4" />
                 </td>
                 <td className="flex items-center gap-2 px-2 sm:px-4 py-2 sm:py-3">
-                  <img src={u.avatar} alt={u.name} className="w-6 h-6 sm:w-8 sm:h-8 rounded-full" />
+                  <Avatar src={u.avatar || null} alt={u.name} size={32} className="w-6 h-6 sm:w-8 sm:h-8 rounded-full" />
                   <span className="text-[11px] sm:text-xs">{u.name}</span>
                 </td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-xs">{u.email}</td>
                 {showUserType && (
                   <td className="px-2 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-xs">{u.userType}</td>
                 )}
-                <td className="px-2 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-xs">{u.joinedDate}</td>
-                <td className="px-2 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-xs">{u.lastActivity}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-xs">{u.joinedDate ? formatDateCustom(u.joinedDate) : ""}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-xs">{u.lastActivity ? formatDateCustom(u.lastActivity) : ""}</td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3">
                   <span className={`px-2 py-1 rounded text-[10px] sm:text-xs font-semibold ${statusStyleMap[(u.status || "active").toLowerCase()] || "bg-gray-100 text-gray-500"}`}>
                     {(u.status || "Active").charAt(0).toUpperCase() + (u.status || "Active").slice(1)}
@@ -115,6 +117,30 @@ export default function UsersTable({ user, onUserClick, onDeleteClick, showUserT
                         }}
                       >
                         <FaEye className="text-gray-500 mr-2 text-xs sm:text-base" /> View Details
+                      </button>
+                      <button
+                        className="flex items-center w-full px-3 py-2 hover:bg-gray-50 text-xs sm:text-sm"
+                        onClick={async () => {
+                          try {
+                            const blob = await boUsersService.exportUser(String(u.id));
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `user-${u.id}.csv`;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            window.URL.revokeObjectURL(url);
+                          } catch (err) {
+                            console.error('Export failed', err);
+                            alert('Failed to export user.');
+                          } finally {
+                            setActionUser(null);
+                          }
+                        }}
+                      >
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 7l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 21H3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        Export
                       </button>
                       <button
                         className="flex items-center w-full px-3 py-2 hover:bg-red-50 text-xs sm:text-sm"

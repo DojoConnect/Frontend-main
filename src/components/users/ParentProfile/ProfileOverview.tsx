@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FaUser, FaRegCopy, FaEnvelope, FaCalendarAlt } from "react-icons/fa";
+import { formatDateCustom } from "@/lib/dateFormatter";
 
 interface ParentProfile {
   name?: string;
@@ -47,17 +48,14 @@ export default function ProfileOverview({ profile }: ProfileOverviewProps) {
     setEditFields({ ...editFields, [e.target.name]: e.target.value });
   };
 
-  // Helper: format date as 'Day, Month Date, Year'
+  // Helper: format date using the custom date formatter
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return "-";
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "-";
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    try {
+      return formatDateCustom(dateStr);
+    } catch {
+      return "-";
+    }
   };
 
   // Helper: fallback for missing fields
@@ -219,7 +217,7 @@ export default function ProfileOverview({ profile }: ProfileOverviewProps) {
             <label className="block text-gray-400 text-sm mb-1">Referral Code</label>
             <input className="w-full border border-gray-200 rounded-md px-3 py-2 bg-gray-100" value={fallback(localProfile.referral_code)} readOnly />
             <label className="block text-gray-400 text-sm mb-1">Joined</label>
-            <input className="w-full border border-gray-200 rounded-md px-3 py-2 bg-gray-100" value={fallback(localProfile.created_at)} readOnly />
+            <input className="w-full border border-gray-200 rounded-md px-3 py-2 bg-gray-100" value={formatDate(localProfile.created_at)} readOnly />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-6">

@@ -1,4 +1,7 @@
 import { FaEllipsisV, FaRegCalendarAlt, FaRegChartBar, FaRegUser, FaSearch, FaFilter } from "react-icons/fa";
+import Avatar from '@/components/ui/Avatar';
+import { resolveImageUrl } from '@/lib/imageUrl';
+import { formatDateCustom } from '@/lib/dateFormatter';
 
 type AttendanceRow = {
   id: string | number;
@@ -18,16 +21,33 @@ export default function AttendanceTab({
   attendance: any;
   rows: AttendanceRow[];
 }) {
-  // Extract attendanceSummary from attendance prop
-  const attendanceSummary = attendance?.summary || {
-    totalSessions: 0,
-    averageRate: "0%",
-    lowAttendanceCount: 0,
-    lowAttendancePercent: "0%",
+  // Normalize attendance summary fields from backend (handles avgAttendanceRate or averageRate)
+  const rawSummary = attendance?.summary || attendance || {};
+  const totalSessions = rawSummary.totalSessions ?? rawSummary.total_sessions ?? 0;
+  const avgRateRaw = rawSummary.avgAttendanceRate ?? rawSummary.avg_attendance_rate ?? rawSummary.averageRate ?? rawSummary.average_rate ?? null;
+  const averageRate = avgRateRaw == null ? "0%" : (typeof avgRateRaw === 'number' ? `${Math.round(avgRateRaw)}%` : String(avgRateRaw));
+  const lowAttendanceCount = (rawSummary.lowAttendanceStudents && rawSummary.lowAttendanceStudents.length) || rawSummary.lowAttendanceCount || 0;
+  const lowAttendancePercent = rawSummary.lowAttendancePercent ?? rawSummary.low_attendance_percent ?? "0%";
+  const attendanceSummary = {
+    totalSessions,
+    averageRate,
+    lowAttendanceCount,
+    lowAttendancePercent,
   };
 
   // Extract attendanceRows from attendance prop or use rows
-  const attendanceRows: AttendanceRow[] = attendance?.rows || rows;
+  // Backend may provide lowAttendanceStudents or rows; normalize structure
+  const rawRows = attendance?.rows || attendance?.lowAttendanceStudents || attendance?.data || rows || [];
+  const attendanceRows: AttendanceRow[] = (rawRows || []).map((r: any) => ({
+    id: r.id,
+    avatar: resolveImageUrl(r) || r.avatar || r.image || r.imageUrl || r.avatarUrl || null,
+    name: `${r.firstName || r.first_name || r.first || ''} ${r.lastName || r.last_name || r.last || ''}`.trim(),
+    attendance: r.attendancePercentage ?? r.attendance_percentage ?? r.attendance ?? null,
+    sessionsAttended: r.sessionsHeld ?? r.sessions_held ?? r.sessionsAttended ?? 0,
+    sessionsMissed: r.sessionsMissed ?? r.sessions_missed ?? 0,
+    lastAttended: (r.lastAttendedDate || r.last_attended_date || r.last_attended) ? formatDateCustom(r.lastAttendedDate || r.last_attended_date || r.last_attended) : '',
+    status: r.status || (r.enrollmentActive ? 'Active' : (r.enrollmentActive === false ? 'Inactive' : null)) || null,
+  }));
 
   // Empty state
   if (!attendance || attendance.length === 0) {
@@ -139,17 +159,19 @@ export default function AttendanceTab({
               <tr key={student.id} className="hover:bg-gray-50 cursor-pointer">
                 <td className="px-2 sm:px-4 py-2 sm:py-3"><input type="checkbox" /></td>
                 <td className="flex items-center gap-2 px-2 sm:px-4 py-2 sm:py-3">
-                  <img src={student.avatar} alt={student.name} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover" />
+                  <Avatar src={student.avatar} alt={student.name} size={32} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover" />
                   <span className="text-xs sm:text-sm">{student.name}</span>
                 </td>
-                <td className="px-2 sm:px-4 py-2 sm:py-3">{student.attendance}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3">{student.attendance ?? ''}</td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3">{student.sessionsAttended}</td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3">{student.sessionsMissed}</td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3">{student.lastAttended}</td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3">
-                  <span className="px-2 py-1 rounded text-[11px] sm:text-xs font-semibold bg-green-100 text-green-600">
-                    {student.status}
-                  </span>
+                  {student.status ? (
+                    <span className={`px-2 py-1 rounded text-[11px] sm:text-xs font-semibold ${String(student.status).toLowerCase() === 'inactive' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                      {student.status}
+                    </span>
+                  ) : ''}
                 </td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3 text-right">
                   <span className="bg-white border border-gray-200 rounded p-1">

@@ -5,6 +5,8 @@ import { FaPlus, FaDownload, FaSearch, FaFilter } from "react-icons/fa";
 import MainLayout from '../../../../../components/Dashboard/MainLayout';
 import Pagination from '../../../../../components/users/Pagination';
 import UsersTable from '../../../../../components/users/UsersTable';
+import { boUsersService } from '@/services/bo-users.service';
+import { formatDateCustom } from '@/lib/dateFormatter';
 
 type CardMetaItem = {
   title: string;
@@ -13,11 +15,10 @@ type CardMetaItem = {
 };
 
 const cardMeta: Record<string, CardMetaItem> = {
-  adminCount: { title: "Dojo Admins", breadcrumb: "Dojo Admins", role: "admin" },
-  instructorCount: { title: "Instructors", breadcrumb: "Instructors", role: "instructor" },
-  parentCount: { title: "Parents", breadcrumb: "Parents", role: "parent" },
-  // Accept both 'student' and 'child' for Students
-  studentCount: { title: "Students", breadcrumb: "Students", role: ["student", "child"] },
+  dojoOwners: { title: "Dojo Admins", breadcrumb: "Dojo Admins", role: "dojo_owner" },
+  instructors: { title: "Instructors", breadcrumb: "Instructors", role: "instructor" },
+  parents: { title: "Parents", breadcrumb: "Parents", role: "parent" },
+  children: { title: "Students", breadcrumb: "Students", role: "child" },
   card5: { title: "Pending Profiles", breadcrumb: "Pending Profiles" },
   card6: { title: "Recent Profiles", breadcrumb: "Recent Profiles" },
   card7: { title: "User Activity Trends", breadcrumb: "User Activity Trends" },
@@ -40,31 +41,35 @@ export default function CardSummaryPage() {
     setLoading(true);
 
     if (meta.role) {
-      fetch(`https://backoffice-api.dojoconnect.app/get_users`)
-        .then(res => res.json())
-        .then(data => {
-          // Accept both 'student' and 'child' for Students
-          const roles = Array.isArray(meta.role) ? meta.role : [meta.role];
-          const filtered = (data.data || [])
-            .filter((u: any) => roles.includes((u.role || "").toLowerCase()))
-            .map((u: any) => ({
-              id: u.id,
-              name: u.name,
-              email: u.email,
-              avatar: u.avatar && u.avatar !== "" ? u.avatar : "/default-avatar.png",
-              joinedDate: u.created_at ? u.created_at.split(" ")[0] : "",
-              lastActivity: u.last_activity || "-",
-              status: u.subscription_status
-                ? u.subscription_status.charAt(0).toUpperCase() + u.subscription_status.slice(1)
-                : "Inactive",
-            }));
+      const fetchUsers = async () => {
+        try {
+          const response = await boUsersService.listUsers({
+            role: meta.role as any,
+            sortBy: 'createdAt',
+            sortOrder: 'desc',
+          });
+          
+          const filtered = (response.data || []).map((u: any) => ({
+            id: u.id,
+            name: `${u.firstName} ${u.lastName}`,
+            email: u.email,
+            avatar: u.avatarUrl || null,
+            joinedDate: u.joinedDate ? formatDateCustom(u.joinedDate) : "",
+            lastActivity: u.lastActivity || null,
+            status: u.status
+              ? u.status.charAt(0).toUpperCase() + u.status.slice(1)
+              : "Inactive",
+          }));
           setUsers(filtered);
-          setLoading(false);
-        })
-        .catch(() => {
+        } catch (error) {
+          console.error("Failed to fetch users:", error);
           setUsers([]);
+        } finally {
           setLoading(false);
-        });
+        }
+      };
+      
+      fetchUsers();
     } else {
       setUsers([]);
       setLoading(false);

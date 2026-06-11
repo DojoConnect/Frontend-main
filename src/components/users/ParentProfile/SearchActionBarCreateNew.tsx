@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { boUsersService } from '@/services/bo-users.service';
 import { FaFlag, FaChevronDown } from "react-icons/fa";
 import { IoMdClose } from "react-icons/io";
 
@@ -10,7 +11,7 @@ const months = [
 const years = Array.from({ length: 20 }, (_, i) => 2010 + i);
 const experiences = ["Beginner", "Amateur", "Advanced"];
 
-export default function SearchActionsBar() {
+export default function SearchActionsBar({ onExport, parentId, onCreated }: { onExport?: () => void | Promise<void>, parentId?: string, onCreated?: () => void }) {
   const [showModal, setShowModal] = useState(false);
 
   return (
@@ -56,7 +57,9 @@ export default function SearchActionsBar() {
             </svg>
             Create New
           </button>
-          <button className="flex items-center gap-2 bg-white border border-red-600 rounded-md px-4 py-2 font-medium text-red-600 shadow hover:bg-red-50 transition">
+          <button
+            onClick={() => onExport && onExport()}
+            className="flex items-center gap-2 bg-white border border-red-600 rounded-md px-4 py-2 font-medium text-red-600 shadow hover:bg-red-50 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4m-8 8h12"/>
             </svg>
@@ -66,13 +69,13 @@ export default function SearchActionsBar() {
       </div>
       {/* Modal */}
       {showModal && (
-        <CreateChildProfileModal onClose={() => setShowModal(false)} />
+        <CreateChildProfileModal onClose={() => setShowModal(false)} parentId={parentId} onCreated={onCreated} />
       )}
     </>
   );
 }
 
-function CreateChildProfileModal({ onClose }: { onClose: () => void }) {
+function CreateChildProfileModal({ onClose, parentId, onCreated }: { onClose: () => void, parentId?: string, onCreated?: () => void }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -80,6 +83,32 @@ function CreateChildProfileModal({ onClose }: { onClose: () => void }) {
   const [month, setMonth] = useState<string>("");
   const [year, setYear] = useState<number | "">("");
   const [experience, setExperience] = useState<string>("");
+
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const dob = day && month && year ? `${year}-${String(months.indexOf(month) + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : undefined;
+      const payload: any = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        parentUserId: parentId,
+        experienceLevel: experience ? experience.toLowerCase() : undefined,
+        dob,
+      };
+      await boUsersService.createStudent(payload);
+      if (onCreated) onCreated();
+      onClose();
+    } catch (err) {
+      console.error('Failed to create child profile', err);
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -113,7 +142,7 @@ function CreateChildProfileModal({ onClose }: { onClose: () => void }) {
           <div className="mb-1 text-black font-bold text-lg">Create new child's profile</div>
           <div className="mb-6 text-gray-500 text-sm">Fill the form to add a new child</div>
           {/* Form */}
-          <form>
+          <form onSubmit={handleSubmit}>
             {/* First Name */}
             <label className="block text-gray-600 text-sm mb-1">First Name</label>
             <input
@@ -203,9 +232,10 @@ function CreateChildProfileModal({ onClose }: { onClose: () => void }) {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full rounded-md bg-red-600 text-white py-2 font-semibold"
+              disabled={submitting}
+              className={`w-full rounded-md text-white py-2 font-semibold ${submitting ? 'bg-red-200' : 'bg-red-600 hover:bg-red-700'}`}
             >
-              Create Profile
+              {submitting ? 'Creating…' : 'Create Profile'}
             </button>
           </form>
         </div>

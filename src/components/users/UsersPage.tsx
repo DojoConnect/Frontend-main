@@ -8,6 +8,8 @@ import UserSummary from "./UserSummary";
 import Pagination from "./Pagination";
 import ExportModal from './ExportModal';
 import CreateProfileModal from "./CreateProfileModal";
+import { boUsersService } from "@/services/bo-users.service";
+import { formatDateCustom } from "@/lib/dateFormatter";
 
 const FILTERS = [
   { label: "Today", value: "today" },
@@ -18,19 +20,20 @@ const FILTERS = [
 ];
 
 const ROLE_DISPLAY_MAP: Record<string, string> = {
-  admin: "School Admin",
+  dojo_owner: "School Admin",
   instructor: "Instructor",
   parent: "Parent",
   child: "Student",
   student: "Student",
 };
 
+// Use backend role keys for tab values so filtering matches returned user.role
 const TABS = [
   { label: "All Users", value: "all" },
-  { label: "School Admins", value: "admin" },
+  { label: "School Admins", value: "dojo_owner" },
   { label: "Instructors", value: "instructor" },
   { label: "Parents", value: "parent" },
-  { label: "Students", value: "student" },
+  { label: "Students", value: "child" },
 ];
 
 const MONTHS = [
@@ -71,51 +74,50 @@ export default function UsersPage() {
     setShowDeleteModal(true);
   };
 
-  // Fetch users from backend with filter
-  useEffect(() => {
+  // Fetch users from backend
+  const fetchUsers = async () => {
     setLoading(true);
-    let body: any = { period: activeFilter };
-    if (activeFilter === "custom" && customRange.start && customRange.end) {
-      body.startDate = customRange.start;
-      body.endDate = customRange.end;
-    }
-    fetch("https://backoffice-api.dojoconnect.app/get_users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data.data)) {
-          setUsers(
-            data.data.map((u: any) => ({
-              id: u.id,
-              name: u.name,
-              email: u.email,
-              role: u.role,
-              userType: ROLE_DISPLAY_MAP[u.role] || u.role,
-              joinedDate: u.created_at ? u.created_at.split(" ")[0] : "",
-              lastActivity: u.last_activity || "-",
-              status: u.subscription_status ? u.subscription_status.charAt(0).toUpperCase() + u.subscription_status.slice(1) : "Inactive",
-              avatar: u.avatar && u.avatar !== "" ? u.avatar : "/default-avatar.png",
-            }))
-          );
-        } else {
-          setUsers([]);
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        setUsers([]);
-        setLoading(false);
+    try {
+      const response = await boUsersService.listUsers({
+        role: 'all',
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
       });
+      
+      if (Array.isArray(response.data)) {
+        setUsers(
+          response.data.map((u: any) => ({
+            id: u.id,
+            name: `${u.firstName} ${u.lastName}`,
+            email: u.email,
+            role: u.role,
+            userType: ROLE_DISPLAY_MAP[u.role] || u.role,
+            joinedDate: u.joinedDate ? formatDateCustom(u.joinedDate) : "",
+            lastActivity: u.lastActivity || null,
+            status: u.status ? u.status.charAt(0).toUpperCase() + u.status.slice(1) : "Inactive",
+            avatar: u.avatarUrl || null,
+          }))
+        );
+      } else {
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
   }, [activeFilter, customRange]);
 
   // Filtered users for current tab
   const filteredUsers =
     activeTab === "all"
       ? users
-      : activeTab === "student"
+      : activeTab === "child"
         ? users.filter((u) => ["student", "child"].includes((u.role || "").toLowerCase()))
         : users.filter((u) => (u.role || "").toLowerCase() === activeTab);
 
@@ -134,13 +136,14 @@ export default function UsersPage() {
       : users.filter((u) => u.role === type).length;
 
   const handleUserClick = (user: any) => {
-    if ((user.role || "").toLowerCase() === "admin") {
+    const role = (user.role || "").toLowerCase();
+    if (role === "dojo_owner" || role === "admin") {
       router.push(`/dashboard/users/school-admin/${user.id}`);
-    } else if ((user.role || "").toLowerCase() === "instructor") {
+    } else if (role === "instructor") {
       router.push(`/dashboard/users/instructor/${user.id}`);
-    } else if ((user.role || "").toLowerCase() === "parent") {
+    } else if (role === "parent") {
       router.push(`/dashboard/users/parent/${user.id}`);
-    } else if (["student", "child"].includes((user.role || "").toLowerCase())) {
+    } else if (["student", "child"].includes(role)) {
       router.push(`/dashboard/users/student/${user.id}`);
     } else {
       router.push(`/dashboard/users/${user.id}`);
@@ -148,7 +151,7 @@ export default function UsersPage() {
   };
 
   // Counts for summary
-  const adminCount = users.filter(u => (u.role || "").toLowerCase() === "admin").length;
+  const adminCount = users.filter(u => (u.role || "").toLowerCase() === "dojo_owner").length;
   const instructorCount = users.filter(u => (u.role || "").toLowerCase() === "instructor").length;
   const parentCount = users.filter(u => (u.role || "").toLowerCase() === "parent").length;
   const studentCount = users.filter(u => ["student", "child"].includes((u.role || "").toLowerCase())).length;
@@ -370,13 +373,14 @@ export default function UsersPage() {
                 className="bg-red-600 text-white rounded-md px-4 py-2 font-medium w-full"
                 onClick={async () => {
                   try {
-                    await fetch(`https://apis.dojoconnect.app/admin/users/${deleteUser.email}`, {
-                      method: "DELETE",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ confirm: true }),
-                    });
-                  } catch (err) { }
-                  setShowDeleteModal(false);
+                    await boUsersService.deleteUser(String(deleteUser.id));
+                    await fetchUsers();
+                  } catch (err) {
+                    console.error('Failed to delete user:', err);
+                    alert('Failed to delete user.');
+                  } finally {
+                    setShowDeleteModal(false);
+                  }
                 }}
               >
                 Delete

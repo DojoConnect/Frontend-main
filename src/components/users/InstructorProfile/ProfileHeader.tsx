@@ -1,5 +1,7 @@
-import React from "react";
+"use client"
+import React, { useEffect, useState } from "react";
 import { FaArrowLeft } from 'react-icons/fa';
+import Avatar from '@/components/ui/Avatar';
 
 const statusStyles: { [key: string]: string } = {
   active: "bg-green-100 text-green-700",
@@ -15,6 +17,19 @@ export default function ProfileHeader({
   profile: any;
   onBack: () => void;
 }) {
+  const [avatarSize, setAvatarSize] = useState<number>(64);
+
+  useEffect(() => {
+    function update() {
+      const w = typeof window !== 'undefined' ? window.innerWidth : 1024;
+      // On small screens prioritize avatar size by making text smaller
+      setAvatarSize(w < 640 ? 96 : 64);
+    }
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
   return (
     <>
       {/* Go Back Button and Breadcrumb */}
@@ -37,13 +52,34 @@ export default function ProfileHeader({
       </div>
       {/* Profile Info Row */}
       <div className="flex  md:items-center items-start  justify-center mb-6 sm:mb-8">
-        <img
-          src={profile.classImg}
-          alt={profile.className}
-          className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover mr-3 sm:mr-6"
-        />
+        {(() => {
+          const base = process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL || '';
+          // Determine real image src from backend fields. If none, pass undefined so Avatar shows SVG placeholder.
+          const possible = profile?.avatar || profile?.avatarUrl || profile?.imageUrl || profile?.image || profile?.profileImage || profile?.picture || profile?.cloudinary_url || profile?.profile_picture;
+          let avatarSrc: string | undefined;
+          if (possible && typeof possible === 'string') {
+            if (possible.startsWith('http')) {
+              avatarSrc = possible;
+            } else if (possible.startsWith('/')) {
+              avatarSrc = `${base}${possible}`;
+            } else {
+              avatarSrc = `${base}/${possible}`;
+            }
+          } else if (profile?.avatar_public_id || profile?.avatarPublicId || profile?.avatar_public_id) {
+            const id = profile.avatar_public_id || profile.avatarPublicId || profile.avatar_public_id;
+            avatarSrc = `${base}/images/${id}`;
+          } else if (profile?.image_path) {
+            avatarSrc = `${base}/${profile.image_path}`;
+          } else {
+            avatarSrc = undefined;
+          }
+
+          return (
+            <Avatar src={avatarSrc} alt={profile.name || profile.className} size={avatarSize} className="mr-3 sm:mr-6" />
+          );
+        })()}
         <div className="flex flex-col items-start mr-3 sm:mr-6">
-          <div className="text-base sm:text-xl font-bold">{profile.name}</div>
+          <div className="text-sm sm:text-xl font-bold capitalize">{profile.name}</div>
           <div className="text-gray-500 text-xs sm:text-sm mt-1">{profile.email}</div>
         </div>
          <button

@@ -13,7 +13,7 @@ export function useUserClasses(email: string) {
       return;
     }
     setLoading(true);
-    fetch(`https://www.backoffice-api.dojoconnect.app/get_user_classes?email=${encodeURIComponent(email)}`, {
+    fetch(`${process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL}/get_user_classes?email=${encodeURIComponent(email)}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     })

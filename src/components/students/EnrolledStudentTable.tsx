@@ -1,5 +1,7 @@
 import { students } from "./studentData";
 import { FaEllipsisV } from "react-icons/fa";
+import Avatar from '@/components/ui/Avatar';
+import { formatDateCustom } from '@/lib/dateFormatter';
 
 export default function EnrolledStudentsTable() {
   return (
@@ -25,12 +27,12 @@ export default function EnrolledStudentsTable() {
                 <input type="checkbox" />
               </td>
               <td className="p-3 flex items-center gap-2">
-                <img src={student.avatar} alt={student.name} className="w-8 h-8 rounded-full object-cover" />
+                <Avatar src={student.avatar || null} alt={student.name} size={32} className="w-8 h-8 rounded-full object-cover" />
                 <span>{student.name}</span>
               </td>
               <td className="p-3">{student.email}</td>
-              <td className="p-3">{student.enrolledDate}</td>
-              <td className="p-3">{student.lastActivity}</td>
+              <td className="p-3">{student.enrolledDate ? formatDateCustom(student.enrolledDate) : ""}</td>
+              <td className="p-3">{student.lastActivity ? formatDateCustom(student.lastActivity) : ""}</td>
               <td className="p-3">
                 <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-semibold">
                   {student.status}

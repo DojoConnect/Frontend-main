@@ -2,6 +2,8 @@ import { useState } from "react";
 import { FaEllipsisV } from "react-icons/fa";
 import SearchActionBar from "./SearchActionBar";
 import Pagination from "./Pagination";
+import Avatar from '@/components/ui/Avatar';
+import { resolveImageUrl } from '@/lib/imageUrl';
 
 interface ClassItem {
   id: number | string;
@@ -66,22 +68,25 @@ export default function ClassesTab({ classes = [] }: ClassesTabProps) {
                     <input type="checkbox" />
                   </td>
                   <td className="p-3 flex items-center gap-2">
-                    <img src={cls.classImg || "/classImage.png"} alt={cls.className} className="w-8 h-8 rounded-md" />
-                    <span>{cls.className}</span>
+                    {
+                        (() => {
+                          const src = resolveImageUrl(cls) || (cls.classImg ? `${process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL}/${cls.classImg}` : null);
+                          return <Avatar src={src || null} alt={cls.className} size={40} className="w-8 h-8 md:w-10 md:h-10 rounded-md object-cover" />;
+                        })()
+                      }
+                      <span className="text-sm md:text-base">{cls.className}</span>
                   </td>
-                  <td className="p-3">{cls.classLevel}</td>
+                    <td className="p-3 text-xs md:text-sm">{cls.classLevel}</td>
                   <td className="p-3 flex items-center gap-2">
-                    {cls.instructorImg && (
-                      <img src={cls.instructorImg} alt={cls.instructorName} className="w-8 h-8 rounded-full" />
-                    )}
-                    <span>{cls.instructorName}</span>
+                      {cls.instructorImg && (
+                        <Avatar src={cls.instructorImg} alt={cls.instructorName} size={32} className="w-8 h-8 rounded-full" />
+                      )}
+                      <span className="text-xs md:text-sm">{cls.instructorName}</span>
                   </td>
-                  <td className="p-3">{cls.enrollmentDate}</td>
-                  <td className="p-3">
-                    <span className="rounded-full px-3 py-1 text-xs font-semibold bg-green-100 text-green-600">
-                      {cls.status}
-                    </span>
-                  </td>
+                    <td className="p-3 text-xs md:text-sm">{cls.enrollmentDate}</td>
+                    <td className="p-3">
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${String(cls.status || '').toLowerCase() === 'inactive' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{cls.status}</span>
+                    </td>
                   <td className="p-3">
                     <FaEllipsisV className="bg-white border border-gray-200 rounded-md p-1 w-6 h-6 text-gray-300 cursor-pointer" />
                   </td>

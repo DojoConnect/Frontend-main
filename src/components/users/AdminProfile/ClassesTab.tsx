@@ -3,6 +3,8 @@ import { FaPlus, FaEllipsisV } from "react-icons/fa";
 import Pagination from "../Pagination";
 import SearchFilterExport from "../../classes/SearchFilterExport";
 import CreateClassModal from "../../classes/CreateClassModal";
+import { formatDateCustom } from '@/lib/dateFormatter';
+import Avatar from '@/components/ui/Avatar';
 
 const statusStyles: Record<string, string> = {
   active: "bg-green-100 text-green-700",
@@ -83,12 +85,17 @@ export default function ClassesTab({ classes, dojoName = "Test Dojo", ownerEmail
                   <input type="checkbox" />
                 </td>
                 <td className="p-3 flex items-center gap-2">
-                  <img src={`/${cls.image_path || "classImage.png"}`} alt={cls.class_name} className="w-10 h-10 rounded-full" />
+                  {
+                    (() => {
+                      const src = cls.imageUrl || cls.image_path ? (cls.imageUrl || (cls.image_path.startsWith('http') ? cls.image_path : `${process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL}/${cls.image_path}`)) : null;
+                      return <Avatar src={src} alt={cls.class_name} size={40} className="w-10 h-10 rounded-full object-cover" />;
+                    })()
+                  }
                   <span>{cls.class_name}</span>
                 </td>
                 <td className="p-3">{cls.level}</td>
                 <td className="p-3">{cls.capacity}</td>
-                <td className="p-3">{cls.created_at?.split(" ")[0]}</td>
+                <td className="p-3">{(cls.created_at || cls.createdAt) ? formatDateCustom(cls.created_at || cls.createdAt) : ""}</td>
                 <td className="p-3">
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusStyles[(cls.status || "").toLowerCase()] || "bg-gray-100 text-gray-500"}`}>
                     {cls.status}

@@ -1,19 +1,19 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from "lucide-react";
+import { boUsersService, UserStats } from "@/services/bo-users.service";
 
 interface UserSummaryProps {
-  adminCount: number;
-  instructorCount: number;
-  parentCount: number;
-  studentCount: number;
-  // Add backend numbers as props if needed, or fetch them in useEffect
+  adminCount?: number;
+  instructorCount?: number;
+  parentCount?: number;
+  studentCount?: number;
 }
 
 const cardData = [
   {
-    label: "No. of School Admins",
-    valueKey: "adminCount",
+    label: "No. of Dojo Owners",
+    valueKey: "dojoOwners",
     icon: (
       // SVG 1
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -50,7 +50,7 @@ const cardData = [
   },
   {
     label: "No. of Instructors",
-    valueKey: "instructorCount",
+    valueKey: "instructors",
     icon: (
       // SVG 2
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -87,7 +87,7 @@ const cardData = [
   },
   {
     label: "No. of Parents",
-    valueKey: "parentCount",
+    valueKey: "parents",
     icon: (
       // SVG 3
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -124,7 +124,7 @@ const cardData = [
   },
   {
     label: "No. of Students",
-    valueKey: "studentCount",
+    valueKey: "children",
     icon: (
       // SVG 4
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -279,20 +279,94 @@ export default function UserSummary({
   parentCount,
   studentCount,
 }: UserSummaryProps) {
-  // You can fetch backend values for card5, card6, card7 here if needed
-  const backendValues = {
-    card5: 0,
-    card6: 0,
-    card7: 0,
-  };
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Merge values for all cards
+  // Fetch user stats from backend
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // First try the dedicated stats endpoint
+        const response = await boUsersService.getUserStats();
+        
+        // Check if we got actual data (not all zeros)
+        const hasData = response.data && (
+          response.data.dojoOwners.count > 0 ||
+          response.data.instructors.count > 0 ||
+          response.data.parents.count > 0 ||
+          response.data.children.count > 0
+        );
+        
+        if (hasData) {
+          setStats(response.data);
+        } else {
+          // If stats endpoint returns zeros, calculate from a larger user list fetch
+          await fetchAndCalculateStats();
+        }
+      } catch (error) {
+        console.error("Failed to fetch user stats:", error);
+        // Fallback to calculating from user list
+        await fetchAndCalculateStats();
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    const fetchAndCalculateStats = async () => {
+      try {
+        const limit = 100; // respect server max
+        const first = await boUsersService.listUsers({ page: 1, limit, role: 'all' });
+        const totalPages = first?.meta?.totalPages ?? Math.max(1, Math.ceil((first?.meta?.totalCount ?? 0) / limit));
+
+        const counts = {
+          dojoOwners: (first.data || []).filter((u: any) => u.role === 'dojo_owner').length,
+          instructors: (first.data || []).filter((u: any) => u.role === 'instructor').length,
+          parents: (first.data || []).filter((u: any) => u.role === 'parent').length,
+          children: (first.data || []).filter((u: any) => u.role === 'child').length,
+        };
+
+        if (totalPages > 1) {
+          for (let p = 2; p <= totalPages; p++) {
+            try {
+              const pageResp = await boUsersService.listUsers({ page: p, limit, role: 'all' });
+              const users = pageResp.data || [];
+              counts.dojoOwners += users.filter((u: any) => u.role === 'dojo_owner').length;
+              counts.instructors += users.filter((u: any) => u.role === 'instructor').length;
+              counts.parents += users.filter((u: any) => u.role === 'parent').length;
+              counts.children += users.filter((u: any) => u.role === 'child').length;
+            } catch (e) {
+              console.warn('Failed fetching users page', p, e);
+            }
+          }
+        }
+
+        setStats({
+          dojoOwners: { count: counts.dojoOwners, percentageChange: 0 },
+          instructors: { count: counts.instructors, percentageChange: 0 },
+          parents: { count: counts.parents, percentageChange: 0 },
+          children: { count: counts.children, percentageChange: 0 },
+        });
+      } catch (error) {
+        console.error('Failed to calculate stats from user list:', error);
+      }
+    };
+    
+    fetchStats();
+  }, []);
+
+  // Merge values from props or fetched data
   const values: Record<string, number> = {
-    adminCount,
-    instructorCount,
-    parentCount,
-    studentCount,
-    ...backendValues,
+    dojoOwners: stats?.dojoOwners.count ?? adminCount ?? 0,
+    instructors: stats?.instructors.count ?? instructorCount ?? 0,
+    parents: stats?.parents.count ?? parentCount ?? 0,
+    children: stats?.children.count ?? studentCount ?? 0,
+  };
+  // Percentage values: prefer backend percentageChange when available
+  const percentValues: Record<string, string> = {
+    dojoOwners: stats?.dojoOwners?.percentageChange !== undefined ? `${stats.dojoOwners.percentageChange}%` : cardData.find(c => c.valueKey === 'dojoOwners')?.percent ?? '0%',
+    instructors: stats?.instructors?.percentageChange !== undefined ? `${stats.instructors.percentageChange}%` : cardData.find(c => c.valueKey === 'instructors')?.percent ?? '0%',
+    parents: stats?.parents?.percentageChange !== undefined ? `${stats.parents.percentageChange}%` : cardData.find(c => c.valueKey === 'parents')?.percent ?? '0%',
+    children: stats?.children?.percentageChange !== undefined ? `${stats.children.percentageChange}%` : cardData.find(c => c.valueKey === 'children')?.percent ?? '0%',
   };
 // Modal state and ref for outside click
   const [showModal, setShowModal] = useState(false);
@@ -341,7 +415,7 @@ export default function UserSummary({
                 <span className="text-xs text-gray-600">{label}</span>
                 <div className="flex items-center bg-[#E6F4EA] text-[#15803D] rounded px-1.5 py-0.5 ml-2 text-[11px] font-semibold">
                   <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 11V3M7 3L3 7M7 3L11 7" stroke="#15803D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  <span className="ml-1">{percent}</span>
+                  <span className="ml-1">{percentValues[valueKey]}</span>
                 </div>
               </div>
             </div>
@@ -422,7 +496,7 @@ export default function UserSummary({
               <span className="flex-1" />
               <div className="flex items-center bg-[#E6F4EA] text-[#15803D] rounded px-1.5 py-0.5 text-[11px] font-semibold ml-2">
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 11V3M7 3L3 7M7 3L11 7" stroke="#15803D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
- <span className="ml-1">{percent}</span>
+ <span className="ml-1">{percentValues[valueKey]}</span>
               </div>
               {idx !== 2 && chart && (
                 <img src="/chart.svg" alt="Chart" className="h-5 w-auto mx-2" />

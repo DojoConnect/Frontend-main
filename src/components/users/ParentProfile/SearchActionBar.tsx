@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function SearchActionsBar() {
+export default function SearchActionsBar({ onExport }: { onExport?: () => void | Promise<void> }) {
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
       <div className="flex gap-3">
@@ -33,7 +33,9 @@ export default function SearchActionsBar() {
         </div>
       </div>
       {/* Export Button */}
-      <button className="flex items-center gap-2 bg-red-600 text-white rounded-md px-4 py-2 font-medium shadow hover:bg-red-700 transition">
+      <button
+        onClick={() => onExport && onExport()}
+        className="flex items-center gap-2 bg-red-600 text-white rounded-md px-4 py-2 font-medium shadow hover:bg-red-700 transition">
        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4m-8 8h12"/>
         </svg>

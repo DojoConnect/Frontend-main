@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp } from "react-icons/fi";
 import { ArrowUpIcon, ArrowRightIcon, ReadMoreIcon, IconA, IconB, IconC, IconD, IconE, IconF, IconG, IconH, IconI } from './dashboardData.js';
 import { boDashboardService, DashboardStats } from '@/services/bo-dashboard.service';
+import { boUsersService } from '@/services/bo-users.service';
+import { formatDateCustom } from '@/lib/dateFormatter';
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -11,6 +13,7 @@ const MONTHS = [
 const YEARS = Array.from({ length: 20 }, (_, i) => 2016 + i);
 
 const METRIC_LABELS = [
+  'Total Users',
   'Total Dojos',
   'Active Subscriptions',
   'Unpaid Subscriptions',
@@ -35,6 +38,7 @@ function chunkArray<T>(arr: T[], chunkSizes: number[]) {
 
 function getIcon(label: string) {
   switch (label) {
+    case 'Total Users': return <IconA />;
     case 'Total Dojos': return <IconA />;
     case 'Active Subscriptions': return <IconB />;
     case 'Unpaid Subscriptions': return <IconC />;
@@ -49,7 +53,7 @@ function getIcon(label: string) {
   }
 }
 // Transform API data into stats array for cards
-function buildStatsFromApiData(apiData: DashboardStats | null) {
+function buildStatsFromApiData(apiData: DashboardStats | null, totalUsers: number = 0) {
   if (!apiData) return METRIC_LABELS.map(label => ({
     label,
     value: 0,
@@ -58,6 +62,7 @@ function buildStatsFromApiData(apiData: DashboardStats | null) {
   }));
 
   return [
+    { label: "Total Users", value: totalUsers, icon: getIcon("Total Users"), percentage: "0%" },
     { label: "Total Dojos", value: apiData.activeDojos ?? 0, icon: getIcon("Total Dojos"), percentage: "0%" },
     { label: "Active Subscriptions", value: apiData.activeSubscriptions ?? 0, icon: getIcon("Active Subscriptions"), percentage: "0%" },
     { label: "Unpaid Subscriptions", value: 0, icon: getIcon("Unpaid Subscriptions"), percentage: "0%" },
@@ -89,25 +94,96 @@ export default function DashboardSummary() {
 
   // API-driven dashboard data
   const [apiData, setApiData] = useState<any>(null);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [userStats, setUserStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch dashboard metrics from API
+  // Fetch dashboard metrics and user stats from API
   useEffect(() => {
     setLoading(true);
     
+    let dashboardComplete = false;
+    let usersComplete = false;
+
+    const markComplete = () => {
+      if (dashboardComplete && usersComplete) {
+        setLoading(false);
+      }
+    };
+
+    // Fetch dashboard stats
     boDashboardService.getDashboardStats()
-      .then(response => {
-        if (response && response.data) {
-          setApiData(response.data);
+      .then((dashResponse) => {
+        if (dashResponse && dashResponse.data) {
+          setApiData(dashResponse.data);
         } else {
           setApiData(null);
         }
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('Failed to fetch dashboard stats:', error);
         setApiData(null);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        dashboardComplete = true;
+        markComplete();
+      });
+
+    // Fetch user list for calculating stats (respect server limits)
+    (async () => {
+      const limit = 100;
+      try {
+        const first = await boUsersService.listUsers({ page: 1, limit, role: 'all', sortBy: 'createdAt', sortOrder: 'desc' });
+        console.log('listUsers first page response:', first);
+
+        const total = first?.meta?.totalCount ?? 0;
+        const totalPages = first?.meta?.totalPages ?? Math.max(1, Math.ceil((first?.meta?.totalCount ?? 0) / limit));
+        setTotalUsers(total);
+
+        // Start counts from the first page
+        const counts = {
+          dojoOwners: (first.data || []).filter((u: any) => u.role === 'dojo_owner').length,
+          instructors: (first.data || []).filter((u: any) => u.role === 'instructor').length,
+          parents: (first.data || []).filter((u: any) => u.role === 'parent').length,
+          children: (first.data || []).filter((u: any) => u.role === 'child').length,
+        };
+
+        // If there are more pages, fetch them sequentially and aggregate counts
+        if (totalPages > 1) {
+          for (let p = 2; p <= totalPages; p++) {
+            try {
+              const pageResp = await boUsersService.listUsers({ page: p, limit, role: 'all', sortBy: 'createdAt', sortOrder: 'desc' });
+              const users = pageResp.data || [];
+              counts.dojoOwners += users.filter((u: any) => u.role === 'dojo_owner').length;
+              counts.instructors += users.filter((u: any) => u.role === 'instructor').length;
+              counts.parents += users.filter((u: any) => u.role === 'parent').length;
+              counts.children += users.filter((u: any) => u.role === 'child').length;
+            } catch (e) {
+              console.warn('Failed fetching users page', p, e);
+            }
+          }
+        }
+
+        setUserStats([
+          { label: 'Dojo Admins', value: counts.dojoOwners, color: '#F53033' },
+          { label: 'Instructors', value: counts.instructors, color: '#FFE5E5' },
+          { label: 'Parents', value: counts.parents, color: '#A3A3A3' },
+          { label: 'Students', value: counts.children, color: '#E5E7EB' }
+        ]);
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+        setTotalUsers(0);
+        setUserStats([
+          { label: 'Dojo Admins', value: 0, color: '#F53033' },
+          { label: 'Instructors', value: 0, color: '#FFE5E5' },
+          { label: 'Parents', value: 0, color: '#A3A3A3' },
+          { label: 'Students', value: 0, color: '#E5E7EB' }
+        ]);
+      } finally {
+        usersComplete = true;
+        markComplete();
+      }
+    })();
   }, []);
 
   // Calendar logic
@@ -124,38 +200,65 @@ export default function DashboardSummary() {
   const calendarDays = [...prevMonthDays, ...monthDays];
 
   // Build stats for cards from API data
-  const stats = buildStatsFromApiData(apiData);
-  const cardRows = chunkArray(stats, [4, 3, 3]);
+  const stats = buildStatsFromApiData(apiData, totalUsers);
+  const cardRows = chunkArray(stats, [4, 4, 3]);
 
-  // User stats
-  const userStats = apiData?.users
-     ? [
-        { label: "Dojo Admins", value: Number(apiData.users.admins ?? 0), color: "#F53033" },     
-        { label: "Instructors", value: Number(apiData.users.instructors ?? 0), color: "#FFE5E5" }, 
-        { label: "Parents", value: Number(apiData.users.parents ?? 0), color: "#A3A3A3" },         
-        { label: "Students", value: Number(apiData.users.students ?? 0), color: "#E5E7EB" }  
-      ]
-    : [
-        { label: "Dojo Admins", value: 0, color: "#F53033" },
-        { label: "Instructors", value: 0, color: "#FFE5E5" },
-        { label: "Parents", value: 0, color: "#A3A3A3" },
-        { label: "Students", value: 0, color: "#E5E7EB" }
-      ];
   // Dummy dojos for Top Dojo Revenue 
   type DojoType = {
+    dojoName?: string;
     name?: string;
-    revenue?: number;
-    percentage?: string;
+    revenue?: number | string;
+    percentage?: string | number;
     [key: string]: any;
   };
 
-  const dojos = Array.isArray(apiData?.dojos)
-    ? apiData.dojos.map((d: DojoType) => ({
-        ...d,
-        revenue: d.revenue ?? 0,
-        percentage: d.percentage ?? "0%"
-      }))
-    : [{ name: "Dojo A" }, { name: "Dojo B" }, { name: "Dojo C" }];
+  const [dojosState, setDojosState] = useState<DojoType[]>([]);
+
+  // Fetch top dojos revenue separately and keep only first 5
+  useEffect(() => {
+    let mounted = true;
+    boDashboardService.getDojosRevenue({ page: 1, limit: 10 })
+      .then((resp) => {
+        if (!mounted) return;
+        const list = Array.isArray(resp?.data) ? resp.data : [];
+        const mapped = list.map((d: any) => {
+          const raw = d.revenue ?? d.amount ?? d.total ?? d.value ?? 0;
+          const revenueNum = typeof raw === 'number' ? raw : Number(String(raw).replace(/[^0-9.-]+/g, '')) || 0;
+          const perc = d.percentage ?? d.pct ?? d.percent ?? d.perc ?? '0%';
+          return {
+            dojoName: d.dojoName || d.name || d.dojo_name || d.title || 'Unknown Dojo',
+            revenue: revenueNum,
+            percentage: typeof perc === 'number' ? `${perc}%` : String(perc)
+          };
+        });
+        setDojosState(mapped.slice(0, 5));
+      })
+      .catch((e) => {
+        console.warn('Failed to fetch dojos revenue:', e);
+        // fallback to any apiData.dojos if present
+        if (Array.isArray(apiData?.dojos)) {
+          const mapped = apiData.dojos.map((d: any) => {
+            const raw = d.revenue ?? d.amount ?? d.total ?? 0;
+            const revenueNum = typeof raw === 'number' ? raw : Number(String(raw).replace(/[^0-9.-]+/g, '')) || 0;
+            return {
+              dojoName: d.dojoName || d.name || d.dojo_name || 'Unknown Dojo',
+              revenue: revenueNum,
+              percentage: d.percentage ?? '0%'
+            };
+          });
+          setDojosState(mapped.slice(0, 5));
+        }
+      });
+    return () => { mounted = false; };
+  }, [apiData]);
+
+  const formatCurrency = (n: number) => {
+    try {
+      return n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    } catch {
+      return String(n);
+    }
+  };
 
   const filterOptions = [
     'Today', 'This week', 'This month', 'All time', 'Custom date'
@@ -614,9 +717,7 @@ const SeventhCardModal = () => (
                 <div>
                   <h2 className="text-base font-semibold text-[#475367] mb-1">Total Users</h2>
                   <div className="text-2xl font-bold text-[#0F1828] mb-8">
-                    {apiData?.users?.total_users
-                      ? Number(apiData.users.total_users).toLocaleString()
-                      : "0"}
+                    {totalUsers ? Number(totalUsers).toLocaleString() : "0"}
                   </div>
                   {/* Add extra space before user profiles */}
                   <div className="mb-6"></div>
@@ -646,10 +747,10 @@ const SeventhCardModal = () => (
                 <div>
                   <h2 className="text-base font-semibold text-[#475367] mb-4">Top Dojo Revenue</h2>
                   <div className="space-y-4">
-                    {(dojos.length > 0 ? dojos : [{ name: "Dojo A" }, { name: "Dojo B" }, { name: "Dojo C" }]).slice(0, 12).map((dojo: any) => (
-                      <div key={dojo.name} className="flex items-center justify-between">
-                        <span className="text-sm text-[#0F1828] font-medium">{dojo.name}</span>
-                        <span className="text-sm text-[#0F1828] font-semibold">£{typeof dojo.revenue === "number" ? dojo.revenue.toLocaleString() : "0"}</span>
+                    {(dojosState.length > 0 ? dojosState : [{ dojoName: "Dojo A", revenue:0 }, { dojoName: "Dojo B", revenue:0 }, { dojoName: "Dojo C", revenue:0 }]).slice(0, 5).map((dojo: any, idx: number) => (
+                      <div key={dojo.dojoName || dojo.name || idx} className="flex items-center justify-between">
+                        <span className="text-sm text-[#0F1828] font-medium">{dojo.dojoName || dojo.name}</span>
+                        <span className="text-sm text-[#0F1828] font-semibold">£{formatCurrency(Number(dojo.revenue || 0))}</span>
                         <span className="text-xs text-gray-400 font-semibold">{dojo.percentage ?? "0%"}</span>
                       </div>
                     ))}

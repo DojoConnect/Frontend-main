@@ -25,7 +25,12 @@ export default function PaymentMethod({ method }: PaymentMethodProps) {
       </div>
       <div className="bg-white rounded-md shadow p-6 flex items-start">
         <div className="flex justify-center items-center">
-          <img src={method.cardImg || "/users/image11.jpg"} alt="card" />
+          {
+            (() => {
+              const src = method?.cardImg ? (method.cardImg.startsWith('http') ? method.cardImg : `${process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL}/${method.cardImg}`) : '/users/image11.jpg';
+              return <img src={src} alt="card" />;
+            })()
+          }
         </div>
         <div>
           <div className="font-semibold text-black text-base">{method.cardType}</div>

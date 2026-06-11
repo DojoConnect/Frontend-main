@@ -2,39 +2,40 @@ import React from 'react';
 import { FaEllipsisV } from "react-icons/fa";
 import Pagination from '../Pagination';
 import SearchActionBar from './SearchActionBar';
+import { formatDateTime } from '@/lib/dateFormatter';
 
 // Helper to capitalize first letter of each word
 const capitalizeWords = (str: string = "") =>
   str.replace(/\b\w/g, (char) => char.toUpperCase());
 
-// Helper to format date as "Mon DD, YYYY HH:MM AM/PM"
-const formatDateTime = (dateStr?: string) => {
-  if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "-";
-  return date.toLocaleString("en-US", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-};
-
 interface Activity {
   id?: string | number;
   type: string;
+  title?: string;
+  message?: string;
   description?: string;
   reference?: string;
-  created_at: string;
+  created_at?: string;
+  createdAt?: string;
 }
 
 interface ActivitiesTableProps {
   activitiesData: Activity[];
+  onExport?: () => void | Promise<void>;
+  currentPage?: number;
+  rowsPerPage?: number;
+  totalRows?: number;
+  onPageChange?: (page: number) => void;
+  loading?: boolean;
 }
 
-export default function ActivitiesTable({ activitiesData }: ActivitiesTableProps) {
+export default function ActivitiesTable({ activitiesData, onExport, currentPage = 1, rowsPerPage = 20, totalRows = 0, onPageChange, loading = false }: ActivitiesTableProps) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16 bg-white rounded-lg border">Loading...</div>
+    );
+  }
+
   if (!activitiesData || activitiesData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 bg-white rounded-lg border">
@@ -46,7 +47,7 @@ export default function ActivitiesTable({ activitiesData }: ActivitiesTableProps
   }
   return (
     <div>
-      <SearchActionBar />
+      <SearchActionBar onExport={onExport} />
       <div className="rounded-lg border bg-white mt-4">
         <table className="min-w-full divide-y divide-gray-200">
           <thead>
@@ -61,11 +62,11 @@ export default function ActivitiesTable({ activitiesData }: ActivitiesTableProps
           <tbody className="bg-white divide-y divide-gray-100">
             {activitiesData && activitiesData.length > 0 ? (
               activitiesData.map((row, idx) => (
-                <tr key={row.id || idx} className="hover:bg-gray-50 cursor-pointer">
-                  <td className="px-4 py-3">{capitalizeWords(row.type)}</td>
-                  <td className="px-4 py-3">{capitalizeWords(row.description || "-")}</td>
-                  <td className="px-4 py-3">{row.reference || "-"}</td>
-                  <td className="px-4 py-3">{formatDateTime(row.created_at)}</td>
+                  <tr key={row.id || idx} className="hover:bg-gray-50 cursor-pointer">
+                    <td className="px-4 py-3">{capitalizeWords(row.type || '')}</td>
+                    <td className="px-4 py-3">{capitalizeWords(row.title || row.message || row.description || '')}</td>
+                    <td className="px-4 py-3">{row.reference || ''}</td>
+                    <td className="px-4 py-3">{row.createdAt || row.created_at ? formatDateTime((row.createdAt || row.created_at)!) : ''}</td>
                   <td className="px-4 py-3 text-right">
                     <button className="bg-white rounded-md p-1 shadow">
                       <FaEllipsisV className="text-gray-400 inline" />
@@ -82,9 +83,10 @@ export default function ActivitiesTable({ activitiesData }: ActivitiesTableProps
         </table>
         <div className="mt-4">
           <Pagination
-            totalRows={activitiesData.length}
-            currentPage={1}
-            onPageChange={() => {}}
+            totalRows={totalRows || activitiesData.length}
+            rowsPerPage={rowsPerPage}
+            currentPage={currentPage}
+            onPageChange={(p) => onPageChange && onPageChange(p)}
           />
         </div>
       </div>

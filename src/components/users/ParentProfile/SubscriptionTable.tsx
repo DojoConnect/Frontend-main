@@ -1,4 +1,5 @@
 import React from "react";
+import Pagination from '@/components/users/Pagination';
 
 interface SubscriptionHistory {
   id: string | number;
@@ -10,9 +11,17 @@ interface SubscriptionHistory {
 
 interface SubscriptionHistoryTableProps {
   data: SubscriptionHistory[];
+  currentPage?: number;
+  rowsPerPage?: number;
+  totalRows?: number;
+  onPageChange?: (page: number) => void;
+  loading?: boolean;
 }
 
-export default function SubscriptionHistoryTable({ data }: SubscriptionHistoryTableProps) {
+export default function SubscriptionHistoryTable({ data, currentPage = 1, rowsPerPage = 20, totalRows = 0, onPageChange, loading = false }: SubscriptionHistoryTableProps) {
+  if (loading) {
+    return <div className="flex items-center justify-center py-16 bg-white rounded-lg border">Loading...</div>;
+  }
   return (
     <div className="overflow-x-auto rounded-lg border bg-white">
       <table className="min-w-full divide-y divide-gray-200">
@@ -38,6 +47,14 @@ export default function SubscriptionHistoryTable({ data }: SubscriptionHistoryTa
           ))}
         </tbody>
       </table>
+      <div className="mt-4">
+        <Pagination
+          totalRows={totalRows || data.length}
+          rowsPerPage={rowsPerPage}
+          currentPage={currentPage}
+          onPageChange={(p) => onPageChange && onPageChange(p)}
+        />
+      </div>
     </div>
   );
 }

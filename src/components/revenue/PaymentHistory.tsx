@@ -1,6 +1,8 @@
 'use client';
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaSearch, FaFilter, FaDownload } from "react-icons/fa";
+import { formatDateCustom } from "@/lib/dateFormatter";
+import { boDashboardService } from '@/services/bo-dashboard.service';
 
 // --- Export Modal ---
 const exportOptions = [
@@ -104,83 +106,56 @@ export default function PaymentHistory({ filter, customRange }: PaymentHistoryPr
   const [loading, setLoading] = useState(false);
   const [showExport, setShowExport] = useState(false);
 
-  // Fetch payment history from API
-  React.useEffect(() => {
+  // Fetch payment history from back-office API
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    let payload: any = {};
-    let period = filter === "all" ? "all" : filter === "today" ? "today" : filter === "week" ? "this_week" : filter === "month" ? "this_month" : "custom";
-    payload.period = period;
-    if (period === "custom" && customRange?.start && customRange?.end) {
-      payload.start_date = customRange.start;
-      payload.end_date = customRange.end;
-    }
-    fetch("https://apis.dojoconnect.app/metrics/revenue", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        // Try to use transactions array if available, else fallback to time_series
-        if (data && data.success && data.data && Array.isArray(data.data.transactions)) {
-          setRows(
-            data.data.transactions.map((t: any) => ({
-              dojo: t.dojo_name || t.dojo || "N/A",
-              plan: t.plan || t.subscription_plan || "N/A",
-              amount: t.amount ? `£${t.amount}` : "N/A",
-              date: t.date ? new Date(t.date).toLocaleDateString() : (t.created_at ? new Date(t.created_at).toLocaleDateString() : "N/A"),
-              status: t.status || "Paid",
-              statusColor: getStatusColor(t.status || "Paid"),
-            }))
-          );
-        } else if (data && data.success && data.data && Array.isArray(data.data.time_series)) {
-          // fallback: show time_series as simple rows
-          setRows(
-            data.data.time_series.map((t: any) => ({
-              dojo: "-",
-              plan: "-",
-              amount: t.revenue ? `£${t.revenue}` : "£0",
-              date: t.date ? new Date(t.date).toLocaleDateString() : "N/A",
-              status: "Paid",
-              statusColor: getStatusColor("Paid"),
-            }))
-          );
-        } else {
-          setRows([]);
-        }
-      })
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false));
+    (async () => {
+      try {
+        const page = 1;
+        const limit = 20;
+        const resp = await boDashboardService.getPaymentHistory(page, limit);
+        const data = resp.data || [];
+        if (cancelled) return;
+        setRows(
+          (data || []).map((t: any) => ({
+            dojo: t.className || t.dojoName || "N/A",
+            plan: t.subscription_plan || t.plan || "",
+            amount: t.amount ? `£${t.amount}` : "N/A",
+            date: t.paidAt ? formatDateCustom(t.paidAt) : (t.createdAt ? formatDateCustom(t.createdAt) : "N/A"),
+            status: t.status || (t.paymentStatus ? t.paymentStatus : "Paid"),
+            statusColor: getStatusColor(t.status || (t.paymentStatus ? t.paymentStatus : "Paid")),
+          }))
+        );
+      } catch (err) {
+        console.error('Failed to load payment history', err);
+        setRows([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [filter, customRange]);
 
   // Export handler
-  const handleExport = (format: string) => {
+  const handleExport = async (format: string) => {
     setLoading(true);
-    let filters: any = {};
-    let period = filter === "all" ? "all" : filter === "today" ? "today" : filter === "week" ? "this_week" : filter === "month" ? "this_month" : "custom";
-    if (period === "custom" && customRange?.start && customRange?.end) {
-      filters.start_date = customRange.start;
-      filters.end_date = customRange.end;
+    try {
+      const blob = await boDashboardService.exportPaymentHistory();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payment-history.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed', err);
+      alert('Failed to export payment history.');
+    } finally {
+      setLoading(false);
     }
-    fetch("https://apis.dojoconnect.app/export/transactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        format,
-        include_all: period === "all",
-        filters,
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.success && data.data && data.data.file_url) {
-          window.open(data.data.file_url, "_blank");
-        } else {
-          alert("Export failed. Please try again.");
-        }
-      })
-      .catch(() => alert("Export failed. Please try again."))
-      .finally(() => setLoading(false));
   };
 
   // Empty state

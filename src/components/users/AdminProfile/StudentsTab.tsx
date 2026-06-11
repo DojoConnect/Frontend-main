@@ -1,6 +1,8 @@
 import React from "react";
+import Avatar from '@/components/ui/Avatar';
 import Pagination from "../StudentProfile/Pagination";
 import { FaEllipsisV } from "react-icons/fa";
+import { formatDateCustom, formatDateTime } from '@/lib/dateFormatter';
 
 const statusStyles = {
   Active: "bg-green-100 text-green-700",
@@ -44,12 +46,12 @@ export default function StudentsTab({ students = [] }: { students?: any[] }) {
                   <input type="checkbox" />
                 </td>
                 <td className="p-3 flex items-center gap-2">
-                  <img src={student.img} alt={student.name} className="w-8 h-8 rounded-full" />
+                  <Avatar src={student.img} alt={student.name} size={32} className="w-8 h-8" />
                   <span>{student.name}</span>
                 </td>
                 <td className="p-3">{student.email}</td>
-                <td className="p-3">{student.joined}</td>
-                <td className="p-3">{student.lastActivity}</td>
+                <td className="p-3">{student.joined ? formatDateCustom(student.joined) : ""}</td>
+                <td className="p-3">{student.lastActivity ? formatDateTime(student.lastActivity) : ""}</td>
                 <td className="p-3">
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[student.status as keyof typeof statusStyles]}`}>
                     {student.status}

@@ -20,7 +20,12 @@ export default function PaymentMethod({ method }: PaymentMethodProps) {
       </div>
       <div className="bg-white rounded-md shadow p-6 flex items-start">
         <div className="flex justify-center items-center">
-          <img src={method?.image || "/users/image11.jpg"} alt="card" className="" />
+          {
+            (() => {
+              const src = method?.image ? `${process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL}/${method.image}` : '/users/image11.jpg';
+              return <img src={src} alt="card" className="" />;
+            })()
+          }
         </div>
         <div>
           <div className="font-semibold text-black text-base">{method?.cardType || "Card"}</div>
@@ -35,7 +40,7 @@ export default function PaymentMethod({ method }: PaymentMethodProps) {
               <rect x="3" y="5" width="18" height="14" rx="2" fill="#E5E7EB"/>
               <path d="M3 7l9 6 9-6" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            {method?.billingEmail || "-"}
+            {method?.billingEmail || ""}
           </div>
         </div>
       </div>

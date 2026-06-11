@@ -1,4 +1,5 @@
 import { FaEllipsisV } from 'react-icons/fa';
+import Avatar from '@/components/ui/Avatar';
 
 
 interface Child {
@@ -32,12 +33,7 @@ export default function EnrolledChildren({ childrenData }: EnrolledChildrenProps
           {childrenData.map((child, i) => (
             <div key={i} className="flex items-center justify-between bg-gray-100 rounded-md px-4 py-3">
               <div className="flex items-center gap-4">
-                <img
-                  src={child.img}
-                  alt={child.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                  onError={e => (e.currentTarget.src = '/Avatar.jpg')}
-                />
+                <Avatar src={child.img} alt={child.name} size={40} className="w-10 h-10 rounded-full object-cover" />
                 <div>
                   <div className="text-black font-medium">{child.name}</div>
                   <div className="text-gray-500 text-sm">{child.email}</div>

@@ -1,31 +1,32 @@
 import React, { useState } from "react";
+import { boUsersService } from '@/services/bo-users.service';
 import { FaUser, FaEnvelope, FaCopy, FaCalendarAlt } from "react-icons/fa";
+import { formatDateCustom } from "@/lib/dateFormatter";
 
 interface ProfileOverviewProps {
   profile: any;
+  dojoStats?: any;
 }
 
 // Helper: fallback for missing fields
 const fallback = (val: any, alt: string = "-") => val || alt;
 
-// Helper: format date as 'Day, Month Date, Year'
+// Helper: format date using the custom date formatter
 const formatDate = (dateStr?: string | null) => {
   if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  try {
+    return formatDateCustom(dateStr);
+  } catch {
+    return "-";
+  }
 };
 
-const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile }) => {
-  const instructors = profile.overview_metrics?.total_instructors ?? profile.total_instructors ?? profile.instructors ?? 0;
-  const activeStudents = profile.overview_metrics?.total_students ?? profile.total_students ?? profile.activeStudents ?? 0;
-  const runningClasses = profile.overview_metrics?.total_classes ?? profile.total_classes ?? profile.runningClasses ?? 0;
-  const avgAttendance = profile.overview_metrics?.avg_attendance ?? profile.avgAttendance ?? "-";
+const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats }) => {
+  const stats = dojoStats || profile.overview_metrics || {};
+  const instructors = stats?.total_instructors ?? profile.total_instructors ?? profile.instructors ?? 0;
+  const activeStudents = stats?.total_students ?? profile.total_students ?? profile.activeStudents ?? 0;
+  const runningClasses = stats?.total_classes ?? profile.total_classes ?? profile.runningClasses ?? 0;
+  const avgAttendance = stats?.avg_attendance ?? profile.avgAttendance ?? "-";
 
   const [showActions, setShowActions] = useState(false);
   const [modal, setModal] = useState<null | "deactivate" | "export" | "delete" | "status">(null);

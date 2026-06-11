@@ -1,6 +1,8 @@
 import React, { useState } from "react";
+import Avatar from '@/components/ui/Avatar';
 import Pagination from "../StudentProfile/Pagination";
 import { FaPlus, FaEllipsisV } from "react-icons/fa";
+import { formatDateCustom, formatDateTime } from '@/lib/dateFormatter';
 import ProfileFormModal from "../ProfileFormModal";
 import ConfirmProfileModal from "../ConfirmProfileModal";
 
@@ -27,7 +29,7 @@ export default function InstructorsTab({ instructors = [], refreshInstructors }:
     if (!pendingPayload) return;
     setLoading(true);
     try {
-      await fetch("https://backoffice-api.dojoconnect.app/create_user", {
+      await fetch(`${process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL}/create_user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(pendingPayload),
@@ -112,14 +114,14 @@ export default function InstructorsTab({ instructors = [], refreshInstructors }:
                     <input type="checkbox" />
                   </td>
                   <td className="p-3 flex items-center gap-2">
-                    <img src={inst.img} alt={inst.name} className="w-8 h-8 rounded-full" />
-                    <span>{inst.name}</span>
+                    <Avatar src={inst.img || inst.avatarUrl || null} alt={`${inst.firstName || ''} ${inst.lastName || ''}`.trim() || inst.name} size={32} className="w-8 h-8" />
+                    <span>{`${inst.firstName || ''} ${inst.lastName || ''}`.trim() || inst.name}</span>
                   </td>
                   <td className="p-3">{inst.email}</td>
-                  <td className="p-3">{inst.joined}</td>
-                  <td className="p-3">{inst.lastActivity}</td>
+                  <td className="p-3">{(inst.joined || inst.assignedAt) ? formatDateCustom(inst.joined || inst.assignedAt) : ""}</td>
+                  <td className="p-3">{(inst.lastActivity || inst.lastActivityAt) ? formatDateTime(inst.lastActivity || inst.lastActivityAt) : ""}</td>
                   <td className="p-3">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[inst.status as keyof typeof statusStyles]}`}>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${String(inst.status || '').toLowerCase() === 'inactive' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
                       {inst.status}
                     </span>
                   </td>

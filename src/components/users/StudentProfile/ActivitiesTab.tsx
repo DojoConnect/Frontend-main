@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FaEllipsisV } from "react-icons/fa";
 import SearchActionBar from "./SearchActionBar";
 import Pagination from "./Pagination";
+import { formatDateCustom } from "@/lib/dateFormatter";
 
 interface Activity {
   type: string;
@@ -12,17 +13,14 @@ interface Activity {
 interface ActivitiesTabProps {
   activities?: Activity[];
 }
-// Helper: format date as 'Day, Month Date, Year'
+// Helper: format date using the custom date formatter
 const formatDate = (dateStr?: string | null) => {
   if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  try {
+    return formatDateCustom(dateStr);
+  } catch {
+    return "-";
+  }
 };
 
 
@@ -64,15 +62,11 @@ export default function ActivitiesTab({ activities = [] }: ActivitiesTabProps) {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[600px]">
             <thead>
-              <tr className="bg-white">
-                <th className="p-3 text-left text-black font-medium text-xs sm:text-sm">Activity Type</th>
-                <th className="p-3 text-left text-black font-medium text-xs sm:text-sm">Description</th>
-                <th className="p-3 text-left text-black font-medium text-xs sm:text-sm">Date &amp; Time Added</th>
-                <th className="p-3 text-left text-black font-medium text-xs sm:text-sm"></th>
-              </tr>
-              {/* Light gray border line below table head */}
-              <tr>
-                <td colSpan={4} className="border-b border-gray-200 p-0"></td>
+              <tr className="bg-gray-100 border-b border-gray-300">
+                <th className="p-3 text-left text-gray-600 font-semibold text-xs sm:text-sm">Activity Type</th>
+                <th className="p-3 text-left text-gray-600 font-semibold text-xs sm:text-sm">Description</th>
+                <th className="p-3 text-left text-gray-600 font-semibold text-xs sm:text-sm">Date &amp; Time Added</th>
+                <th className="p-3 text-left text-gray-600 font-semibold text-xs sm:text-sm"></th>
               </tr>
             </thead>
             <tbody>

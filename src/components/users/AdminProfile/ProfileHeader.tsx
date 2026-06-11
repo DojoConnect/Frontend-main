@@ -1,5 +1,6 @@
 import React from "react";
 import { FaArrowLeft } from 'react-icons/fa';
+import Avatar from '@/components/ui/Avatar';
 
 // Define statusStyles for different user statuses
 const statusStyles: { [key: string]: string } = {
@@ -38,11 +39,7 @@ export default function ProfileHeader({
       </div>
       {/* Profile Info Row */}
       <div className="flex items-center justify-center mb-6 sm:mb-8">
-        <img
-          src={profile.classImg}
-          alt={profile.className}
-          className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover mr-3 sm:mr-6"
-        />
+        <Avatar src={profile.avatar || profile.classImg} alt={profile.name || profile.className} size={64} className="mr-3 sm:mr-6" />
         <div className="flex flex-col items-start mr-3 sm:mr-6">
           <div className="text-base sm:text-xl font-bold">{profile.name}</div>
           <div className="text-gray-500 text-xs sm:text-sm mt-1">{profile.email}</div>

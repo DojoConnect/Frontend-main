@@ -1,16 +1,10 @@
-import Image from 'next/image'
+import Avatar from '@/components/ui/Avatar';
 
 export default function UserRow({ user }: { user: any }) {
   return (
     <div className="grid grid-cols-6 items-center py-3 border-b text-sm text-[#303030]">
       <div className="flex items-center gap-2">
-        <Image
-          src={user.avatar}
-          alt={user.name}
-          width={32}
-          height={32}
-          className="rounded-full"
-        />
+        <Avatar src={user.avatar} alt={user.name} size={32} />
         {user.name}
       </div>
       <div>{user.email}</div>

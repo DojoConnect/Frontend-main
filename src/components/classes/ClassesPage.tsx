@@ -1,10 +1,12 @@
 // components/ClassesPage.tsx
-'use client'
+ 'use client'
 import React, { useEffect, useState } from 'react'
 import { FaEllipsisV } from "react-icons/fa";
 import Pagination from './Pagination';
 import SearchFilterExport from './SearchFilterExport';
-import ClassesTable from './ClassTable'; 
+import ClassesTable from './ClassTable';
+import { boClassesService } from '@/services/bo-classes.service';
+import { resolveImageUrl } from '@/lib/imageUrl';
 
  export interface Instructor {
   name: string;
@@ -31,33 +33,31 @@ export default function ClassesPage() {
   const [page, setPage] = useState(1);
   const rowsPerPage = 5;
 
-   useEffect(() => {
-    fetch('https://www.backoffice-api.dojoconnect.app/get_classes')
-      .then(res => res.json())
-     .then((data) => {
-  const mapped = (data.data || []).map((item: any) => ({
-    id: item.id,
-    class_uid: item.class_uid,
-    className: item.class_name,
-    classLevel: item.level || "",
-    instructor: {
-      name: item.instructor || "No Instructor",
-      avatar: "/instructorImage.png",
-    },
-    enrolledStudents: Number(item.capacity) || 0,
-    dateCreated: item.created_at
-      ? new Date(item.created_at).toISOString().slice(0, 10)
-      : "",
-    status: item.status === "active" ? "Active" : "Deactivated",
-    classImg: item.image_path
-      ? (item.image_path.startsWith("http") ? item.image_path : `/${item.image_path}`)
-      : "/classImg.jpg",
-    // Add more fields if needed
-  }));
-  setClassesData(mapped);
-  setLoading(false);
-})
-      .catch(() => setLoading(false));
+  useEffect(() => {
+    boClassesService
+      .listClasses({ page: 1, limit: 100 })
+      .then((resp) => {
+        const arr = resp.data || [];
+        const mapped = arr.map((item: any) => ({
+          id: item.id,
+          class_uid: item.class_uid || item.id,
+          className: item.name || item.class_name || '',
+          classLevel: item.level || '',
+          instructor: {
+            name: item.instructorName || item.instructor || 'No Instructor',
+            avatar: item.instructorAvatar || item.instructor_avatar || resolveImageUrl(item.instructor || {}) || null,
+          },
+          enrolledStudents: Number(item.enrolledStudents || item.capacity) || 0,
+          dateCreated: item.createdAt || item.created_at || '',
+          status: item.status === 'active' ? 'Active' : 'Deactivated',
+          classImg: item.image_path
+            ? (item.image_path.startsWith('http') ? item.image_path : `/${item.image_path}`)
+            : (resolveImageUrl(item) || (item.instructorAvatar || item.instructor_avatar) || null),
+        }));
+        setClassesData(mapped);
+      })
+      .catch(() => setClassesData([]))
+      .finally(() => setLoading(false));
   }, []);
 // Slice data for current page
   const pagedClasses = classesData.slice((page - 1) * rowsPerPage, page * rowsPerPage);

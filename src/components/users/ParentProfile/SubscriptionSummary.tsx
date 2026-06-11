@@ -12,15 +12,15 @@ export default function SubscriptionSummary({ summary }: { summary: any }) {
         <div className="flex justify-between items-start gap-6">
           <div>
             <div className="text-gray-500 text-xs">Plan Name</div>
-            <div className="text-black-300 text-lg font-bold">{summary.plan_name || "-"}</div>
+            <div className="text-black-300 text-lg font-bold">{summary.plan_name || ""}</div>
           </div>
           <div>
             <div className="text-gray-500 text-xs">Billing Cycle</div>
-            <div className="text-black-300 text-lg font-bold">{summary.billing_cycle || "-"}</div>
+            <div className="text-black-300 text-lg font-bold">{summary.billing_cycle || ""}</div>
           </div>
           <div>
             <div className="text-gray-500 text-xs">Plan Cost</div>
-            <div className="text-black-300 text-lg font-bold">{summary.plan_cost ? `$${summary.plan_cost}` : "-"}</div>
+            <div className="text-black-300 text-lg font-bold">{summary.plan_cost ? `$${summary.plan_cost}` : ""}</div>
           </div>
         </div>
         <div className="mt-6">

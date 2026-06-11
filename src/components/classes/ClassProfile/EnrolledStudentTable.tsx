@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { FaEllipsisV } from "react-icons/fa";
+import Avatar from '@/components/ui/Avatar';
+import { formatDateCustom } from '@/lib/dateFormatter';
 
 // Export Modal for enrollments
 const exportOptions = [
@@ -211,16 +213,29 @@ export default function EnrolledStudentsTable({ students, classId }: { students:
               <tr key={student.id} className="hover:bg-gray-50 cursor-pointer">
                 <td className="px-2 sm:px-4 py-2 sm:py-3"><input type="checkbox" /></td>
                 <td className="flex items-center gap-2 px-2 sm:px-4 py-2 sm:py-3">
-                  <img src={student.avatar} alt={student.name} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover" />
+                  <Avatar src={student.avatar} alt={student.name} size={32} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover" />
                   <span className="text-xs sm:text-sm">{student.name}</span>
                 </td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3">{student.email}</td>
-                <td className="px-2 sm:px-4 py-2 sm:py-3">{student.enrolledDate}</td>
-                <td className="px-2 sm:px-4 py-2 sm:py-3">{student.lastActivity}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3">{
+                  (student.enrolledDate && formatDateCustom(student.enrolledDate)) ||
+                  (student.enrolled_date && formatDateCustom(student.enrolled_date)) ||
+                  (student.enrolled_at && formatDateCustom(student.enrolled_at)) ||
+                  ''
+                }</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3">{
+                  (student.lastActivityDate && formatDateCustom(student.lastActivityDate)) ||
+                  (student.lastActivity && formatDateCustom(student.lastActivity)) ||
+                  (student.last_activity && formatDateCustom(student.last_activity)) ||
+                  (student.last_active_at && formatDateCustom(student.last_active_at)) ||
+                  ''
+                }</td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3">
-                  <span className="px-2 py-1 rounded text-[11px] sm:text-xs font-semibold bg-green-100 text-green-600">
-                    {student.status}
-                  </span>
+                  {student.status ? (
+                    <span className={`px-2 py-1 rounded text-[11px] sm:text-xs font-semibold ${String(student.status).toLowerCase() === 'inactive' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                      {student.status}
+                    </span>
+                  ) : ''}
                 </td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3 text-right">
                   <span className="bg-white border border-gray-200 rounded p-1">

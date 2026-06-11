@@ -1,6 +1,8 @@
 import React from "react";
+import Avatar from '@/components/ui/Avatar';
 import Pagination from "../StudentProfile/Pagination";
 import { FaPlus, FaEllipsisV } from "react-icons/fa";
+import { formatDateCustom, formatDateTime } from '@/lib/dateFormatter';
 
 const statusStyles = {
   Active: "bg-green-100 text-green-700",
@@ -55,12 +57,12 @@ export default function ParentsTab({ parents = [] }: { parents?: any[] }) {
                   <input type="checkbox" />
                 </td>
                 <td className="p-3 flex items-center gap-2">
-                  <img src={parent.img} alt={parent.name} className="w-8 h-8 rounded-full" />
+                  <Avatar src={parent.img} alt={parent.name} size={32} className="w-8 h-8" />
                   <span>{parent.name}</span>
                 </td>
                 <td className="p-3">{parent.email}</td>
-                <td className="p-3">{parent.joined}</td>
-                <td className="p-3">{parent.lastActivity}</td>
+                <td className="p-3">{parent.joined ? formatDateCustom(parent.joined) : ""}</td>
+                <td className="p-3">{parent.lastActivity ? formatDateTime(parent.lastActivity) : ""}</td>
                 <td className="p-3">
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[parent.status as keyof typeof statusStyles]}`}>
                     {parent.status}

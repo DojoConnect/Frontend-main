@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FaEllipsisV } from "react-icons/fa";
 import SearchActionBar from "./SearchActionBar";
 import Pagination from "./Pagination";
+import { formatDateCustom } from '@/lib/dateFormatter';
 
 interface Activity {
   type: string;
@@ -14,9 +15,9 @@ interface ActivitiesTableProps {
 }
 // Helper: format date as 'Day, Month Date, Year'
 const formatDate = (dateStr?: string | null) => {
-  if (!dateStr) return "-";
+  if (!dateStr) return "";
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "-";
+  if (isNaN(date.getTime())) return "";
   return date.toLocaleDateString("en-US", {
     weekday: "short",
     year: "numeric",
@@ -78,19 +79,10 @@ export default function ActivitiesTable({ activities = [] }: ActivitiesTableProp
             </thead>
             <tbody>
               {pagedActivities.map((act, idx) => {
-                const dateObj = new Date(act.date);
-                const formattedDate = isNaN(dateObj.getTime()) ? "-" : dateObj.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                });
-                const formattedTime = isNaN(dateObj.getTime()) ? "-" : dateObj.toLocaleTimeString("en-US", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
+                const formattedDate = act.date ? formatDateCustom(act.date) : "";
+                const formattedTime = act.date ? new Date(act.date).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' }) : '';
                 return (
-                  <tr key={idx} className="bg-white border-b border-gray-200 last:border-b-0 h-14">
+                  <tr key={`${act.type}-${act.date}-${idx}`} className="bg-white border-b border-gray-200 last:border-b-0 h-14">
                     <td className="p-3 text-xs sm:text-sm">{act.type}</td>
                     <td className="p-3 text-xs sm:text-sm">{act.description}</td>
                     <td className="p-3 text-xs sm:text-sm">{formattedDate}</td>

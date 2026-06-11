@@ -1,10 +1,18 @@
 import React, { useState } from "react";
+import { boUsersService } from '@/services/bo-users.service';
 import { FaUser, FaRegCopy, FaEnvelope, FaCalendarAlt, FaEllipsisV } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
+import Avatar from '@/components/ui/Avatar';
 
 export default function ProfileOverview({ profile }: { profile: any }) {
   const router = useRouter();
-  const getInfo = (value: any) => value ?? "-";
+  const getInfo = (value: any) => {
+    if (value === null || value === undefined || value === "") return "";
+    if (typeof value === 'object') {
+      return value.name || value.dojoName || value.dojo_name || JSON.stringify(value);
+    }
+    return value;
+  };
   const [showActions, setShowActions] = useState(false);
   const [modal, setModal] = useState<null | "deactivate" | "export" | "delete" | "status">(null);
   const [editMode, setEditMode] = useState(false);
@@ -30,9 +38,9 @@ export default function ProfileOverview({ profile }: { profile: any }) {
   };
  // Helper: format date as 'Day, Month Date, Year'
   const formatDate = (dateStr?: string | null) => {
-    if (!dateStr) return "-";
+    if (!dateStr) return "";
     const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "-";
+    if (isNaN(date.getTime())) return "";
     return date.toLocaleDateString("en-US", {
       weekday: "short",
       year: "numeric",
@@ -41,22 +49,20 @@ export default function ProfileOverview({ profile }: { profile: any }) {
     });
   };
   // Helper: fallback for missing fields
-  const fallback = (val: any, alt: string = "-") => val || alt;
+  const fallback = (val: any, alt: string = "") => val || alt;
 
   // Save changes (edit)
   const handleEditConfirm = async () => {
     setLoading(true);
     setError(null);
     try {
-      await fetch(`https://apis.dojoconnect.app/admin/users/${profile.email}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editFields.name,
-          city: editFields.city,
-          dob: editFields.dob,
-        }),
-      });
+      const idOrEmail = profile.id || (profile as any).userId || profile.email;
+      await boUsersService.updateUser(String(idOrEmail), {
+        firstName: editFields.name?.split(' ')[0] || undefined,
+        lastName: editFields.name?.split(' ').slice(1).join(' ') || undefined,
+        city: editFields.city,
+        dob: editFields.dob,
+      } as any);
       setEditMode(false);
       setModal(null);
       setLocalProfile((prev: any) => ({
@@ -75,11 +81,8 @@ export default function ProfileOverview({ profile }: { profile: any }) {
     setLoading(true);
     setError(null);
     try {
-      await fetch(`https://apis.dojoconnect.app/admin/users/${profile.email}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "inactive" }),
-      });
+      const idOrEmail = profile.id || profile.userId || profile.email;
+      await boUsersService.updateUserStatus(String(idOrEmail), 'inactive');
       setModal(null);
       setLocalProfile((prev: any) => ({
         ...prev,
@@ -424,7 +427,12 @@ export default function ProfileOverview({ profile }: { profile: any }) {
                     className="flex items-center justify-between rounded-md border-b border-gray-200 last:border-b-0 flex-1 min-h-[120px]"
                     style={{ minHeight: 0 }}
                   >
-                    <img src={cls.img || "/classImage.png"} alt={cls.name} className="w-16 h-16 rounded-md mr-4" />
+                    {
+                      (() => {
+                        const src = cls.img ? (cls.img.startsWith('http') ? cls.img : `${process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL}/${cls.img}`) : null;
+                        return <Avatar src={src} alt={cls.name} size={64} className="w-16 h-16 rounded-md mr-4 object-cover" />;
+                      })()
+                    }
                     <div className="flex-1">
                       <div className="font-semibold">{cls.name} - {cls.level}</div>
                       <div className="text-xs text-gray-500">{cls.instructor}</div>

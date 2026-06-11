@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { formatDateCustom } from '@/lib/dateFormatter';
 import { Search } from "lucide-react";
 
 // API-driven notifications
@@ -103,7 +104,7 @@ const Header = () => {
                     >
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-semibold text-black text-base">{n.title || n.message || "Notification"}</span>
-                         <span className="text-xs text-gray-400">{n.time || n.created_at || ""}</span>
+                         <span className="text-xs text-gray-400">{n.time || (n.created_at ? formatDateCustom(n.created_at) : "")}</span>
                       </div>
                       <div className="text-xs text-gray-500">{n.description || n.message || ""}</div>
                     </div>

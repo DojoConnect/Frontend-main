@@ -3,7 +3,6 @@
 
 import { useState } from 'react'
 import notFound from "./Illustration found.png"
-import Image from 'next/image'
 
 const tabs = [
   { name: 'All Users', count: 0 },

@@ -45,6 +45,14 @@ class HttpClient {
     }
 
     try {
+      // Debug: log the final request URL and params to help trace invalid query errors
+      try {
+        // eslint-disable-next-line no-console
+        console.debug('[HttpClient] Request URL:', url, 'params:', options.params);
+      } catch (e) {
+        // ignore logging errors
+      }
+
       let response = await fetch(url, {
         ...options,
         method,

@@ -8,6 +8,7 @@ import ProfileHeader from "@/components/users/InstructorProfile/ProfileHeader";
 import ProfileTabs from "@/components/users/InstructorProfile/ProfileTabs";
 import AssignedClassesTable from "@/components/users/InstructorProfile/AssignedClassesTable";
 import ActivitiesTable from "@/components/users/InstructorProfile/ActivitiesTable";
+import { boInstructorService } from '@/services/bo-instructor.service'
 
 const tabs = [
   "Overview",
@@ -26,6 +27,8 @@ export default function InstructorPage() {
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
   const [email, setEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [assignedClasses, setAssignedClasses] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
      async function fetchProfile() {
@@ -39,30 +42,18 @@ export default function InstructorPage() {
         return;
       }
       try {
-        // Get email by id
-        const resUsers = await fetch("https://www.backoffice-api.dojoconnect.app/get_users");
-        if (!resUsers.ok) throw new Error("Failed to fetch users");
-        const usersData = await resUsers.json();
-        const user = usersData.data.find((u: any) => String(u.id) === String(id));
-        if (!user?.email) {
-          setProfile(null);
-          setEmail(null);
-          setLoading(false);
-          setError("User not found.");
-          return;
+        // Fetch profile via back-office service
+        const resp = await boInstructorService.getInstructorProfile(String(id));
+        setProfile(resp || null);
+        // populate email and assigned classes from normalized profile if available
+        if (resp) {
+          setEmail(resp.email || (resp as any).user_email || (resp as any).userEmail || null);
+          const r = resp as any;
+          const initialAssigned = r.assigned_classes || r.assignedClasses || r.classes || r.assignedDojos || [];
+          setAssignedClasses(Array.isArray(initialAssigned) ? initialAssigned : []);
         }
-        setEmail(user.email);
-
-        
-
-        // Get detailed profile
-       const resProfile = await fetch(`https://apis.dojoconnect.app/user_profile_detailed/${user.email}`);
-if (!resProfile.ok) throw new Error("Profile not found for this email.");
-const profileData = await resProfile.json();
-setProfile(profileData.data); 
-console.log("Fetched profile:", profileData.data);
       } catch (err: any) {
-        setError(err.message || "An error occurred.");
+        setError(err?.message || 'An error occurred.');
         setProfile(null);
         setEmail(null);
       }
@@ -70,30 +61,51 @@ console.log("Fetched profile:", profileData.data);
     }
     fetchProfile();
   }, [id]);
+  // Load tab data when activeTab or id changes
+  useEffect(() => {
+      async function load() {
+        if (!id) return;
+        try {
+          if (activeTab === 'Assigned Classes') {
+            const res = await boInstructorService.getInstructorClasses(String(id));
+            setAssignedClasses((res && res.data) || []);
+          }
+          if (activeTab === 'Activites') {
+            const res = await boInstructorService.getInstructorActivities(String(id));
+            setActivities((res && res.data) || []);
+          }
+        } catch (err) {
+          console.error('Failed to load instructor tab data', err);
+        }
+      }
+      load();
+    }, [activeTab, id]);
 
- if (loading) return <MainLayout><div>Loading...</div></MainLayout>;
-if (!profile) return <MainLayout><div>{error}</div></MainLayout>;
-if ((profile.role || profile.userType) !== "instructor") {
-  return <MainLayout><div>Not an Instructor profile</div></MainLayout>;
-}
+  if (loading) return <MainLayout><div>Loading...</div></MainLayout>;
+  if (!profile) return <MainLayout><div>{error}</div></MainLayout>;
+  if ((profile.role || profile.userType) !== "instructor") {
+    return <MainLayout><div>Not an Instructor profile</div></MainLayout>;
+  }
   return (
    <MainLayout>
       <div className="p-6">
         <ProfileHeader profile={profile} onBack={() => router.push('/dashboard?tab=users')} />
         <ProfileTabs tabs={[...tabs]} activeTab={activeTab} setActiveTab={setActiveTab} />
-        {activeTab === "Overview" && email && <Overview profile={profile} email={email} />}
+        {activeTab === "Overview" && <Overview profile={profile} email={email || ''} />}
         {activeTab === "Assigned Classes" && (
           <div className="mt-6">
-            <AssignedClassesTable assignedClasses={profile.assigned_classes || []} />
+            <AssignedClassesTable assignedClasses={assignedClasses.length ? assignedClasses : profile.assigned_classes || []} />
           </div>
         )}
        {activeTab === "Activites" && (
   <div className="mt-6">
     <ActivitiesTable
       activities={
-        (profile.activity_log || []).map((a: any) => ({
+        (activities.length ? activities : (profile.activity_log || [])).map((a: any) => ({
           ...a,
-          description: a.details || "-", // map details to description
+          description: a.description || a.message || a.title || a.details || "",
+          date: a.createdAt || a.created_at || a.updatedAt || a.updated_at || a.date,
+          type: a.activityType || a.type || a.title || a.notificationType || a.name,
         }))
       }
     />

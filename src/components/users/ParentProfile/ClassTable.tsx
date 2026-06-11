@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import Avatar from '@/components/ui/Avatar';
+import { resolveImageUrl } from '@/lib/imageUrl';
 import { FaEllipsisV, FaEye, FaTrash, FaTimes } from "react-icons/fa";
 import SearchActionBar from './SearchActionBar';
 import Pagination from '../Pagination';
@@ -15,9 +17,15 @@ interface ClassRow {
 
 type EnrolledClassesProps = {
   classesData: any[];
+  onExport?: () => void | Promise<void>;
+  currentPage?: number;
+  rowsPerPage?: number;
+  totalRows?: number;
+  onPageChange?: (page: number) => void;
+  loading?: boolean;
 };
 
-const EnrolledClasses = ({ classesData }: EnrolledClassesProps) => {
+const EnrolledClasses = ({ classesData, onExport, currentPage = 1, rowsPerPage = 20, totalRows = 0, onPageChange, loading = false }: EnrolledClassesProps) => {
 
   const [actionClass, setActionClass] = useState<ClassRow | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -42,7 +50,14 @@ const EnrolledClasses = ({ classesData }: EnrolledClassesProps) => {
     };
   }, [actionClass]);
 
-    // Empty state
+    // Loading
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16 bg-white rounded-lg border">Loading...</div>
+    );
+  }
+
+  // Empty state
   if (!classesData || classesData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 bg-white rounded-lg border">
@@ -55,8 +70,9 @@ const EnrolledClasses = ({ classesData }: EnrolledClassesProps) => {
 
   return (
     <>
-    <SearchActionBar />
+    <SearchActionBar onExport={onExport} />
       <div className="rounded-lg border bg-white">
+        <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead>
             <tr className="bg-gray-100">
@@ -78,12 +94,17 @@ const EnrolledClasses = ({ classesData }: EnrolledClassesProps) => {
         <input type="checkbox" />
       </td>
                 <td className="flex items-center gap-2 px-4 py-3">
-        <img src={row.classImg} alt={row.className} className="w-8 h-8 rounded-md object-cover" />
-        <span>{row.className}</span>
-      </td>
+                  {
+                    (() => {
+                      const src = resolveImageUrl(row) || (row.classImg ? `${process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL}/${row.classImg}` : null);
+                      return <Avatar src={src || null} alt={row.className} size={32} className="w-8 h-8 rounded-md object-cover" />;
+                    })()
+                  }
+                  <span className="text-sm md:text-base">{row.className}</span>
+                </td>
                 <td className="px-4 py-3">{row.classLevel}</td>
       <td className="flex items-center gap-2 px-4 py-3">
-        <img src={row.instructor.avatar} alt={row.instructor.name} className="w-7 h-7 rounded-full object-cover" />
+        <Avatar src={row.instructor?.avatar || null} alt={row.instructor?.name || '-'} size={28} className="w-7 h-7 rounded-full object-cover" />
         <span>{row.instructor.name}</span>
       </td>
       <td className="px-4 py-3">{row.enrollmentDate}</td>
@@ -129,12 +150,14 @@ const EnrolledClasses = ({ classesData }: EnrolledClassesProps) => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
        <div className="mt-4">
         <Pagination
-          totalRows={classesData.length}
-          currentPage={1}
-          onPageChange={() => {}}
+          totalRows={totalRows || classesData.length}
+          rowsPerPage={rowsPerPage}
+          currentPage={currentPage}
+          onPageChange={(p) => onPageChange && onPageChange(p)}
         />
       </div>
       {/* Delete Confirmation Modal */}

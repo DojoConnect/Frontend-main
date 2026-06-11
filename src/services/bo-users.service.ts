@@ -1,4 +1,5 @@
-import { httpBackOfficeGet, httpBackOfficePost, httpBackOfficeDelete } from './http';
+import { httpBackOfficeGet, httpBackOfficePost, httpBackOfficeDelete, httpBackOfficePatch } from './http';
+import { resolveImageUrl } from '@/lib/imageUrl';
 
 export interface UserStats {
   dojoOwners: {
@@ -76,6 +77,15 @@ export interface CreateInstructorRequest {
   email: string;
 }
 
+export interface CreateStudentRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  parentUserId?: string;
+  experienceLevel?: 'beginner' | 'intermediate' | 'advanced';
+  dob?: string; // YYYY-MM-DD
+}
+
 export interface CreateUserResponse {
   data: {
     userId: string;
@@ -104,7 +114,7 @@ class BackOfficeUsersService {
    */
   async getUserStats(params?: UserStatsParams): Promise<{ data: UserStats }> {
     try {
-      const response = await httpBackOfficeGet<{ data: UserStats }>('/users/stats', params);
+      const response = await httpBackOfficeGet<{ data: UserStats }>('/backoffice/users/stats', params);
       return response;
     } catch (error) {
       console.error('Failed to fetch user stats:', error);
@@ -119,7 +129,7 @@ class BackOfficeUsersService {
    */
   async listUsers(params?: ListUsersParams): Promise<UserListResponse> {
     try {
-      const response = await httpBackOfficeGet<UserListResponse>('/users/', {
+      const response = await httpBackOfficeGet<UserListResponse>('/backoffice/users/', {
         role: params?.role || 'all',
         sortBy: params?.sortBy || 'createdAt',
         sortOrder: params?.sortOrder || 'desc',
@@ -127,6 +137,15 @@ class BackOfficeUsersService {
         limit: params?.limit || 20,
         ...(params?.search && { search: params.search }),
       });
+      // Normalize avatar/image fields for UI
+      if (response && response.data && Array.isArray(response.data)) {
+        const mapped = response.data.map((u: any) => ({
+          ...u,
+          avatarUrl: u.avatarUrl || u.avatar || resolveImageUrl(u) || null,
+          joinedDate: u.joinedDate || u.createdAt || u.created_at || u.joined_date || null,
+        }));
+        return { ...response, data: mapped };
+      }
       return response;
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -141,7 +160,7 @@ class BackOfficeUsersService {
    */
   async createDojoOwner(data: CreateDojoOwnerRequest): Promise<CreateUserResponse> {
     try {
-      const response = await httpBackOfficePost<CreateUserResponse>('/users/dojo-owner', data);
+      const response = await httpBackOfficePost<CreateUserResponse>('/backoffice/users/dojo-owner', data);
       return response;
     } catch (error) {
       console.error('Failed to create dojo owner:', error);
@@ -156,7 +175,7 @@ class BackOfficeUsersService {
    */
   async createParent(data: CreateParentRequest): Promise<CreateUserResponse> {
     try {
-      const response = await httpBackOfficePost<CreateUserResponse>('/users/parent', data);
+      const response = await httpBackOfficePost<CreateUserResponse>('/backoffice/users/parent', data);
       return response;
     } catch (error) {
       console.error('Failed to create parent:', error);
@@ -171,10 +190,73 @@ class BackOfficeUsersService {
    */
   async createInstructor(data: CreateInstructorRequest): Promise<CreateUserResponse> {
     try {
-      const response = await httpBackOfficePost<CreateUserResponse>('/users/instructor', data);
+      const response = await httpBackOfficePost<CreateUserResponse>('/backoffice/users/instructor', data);
       return response;
     } catch (error) {
       console.error('Failed to create instructor:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new Student (child) profile
+   */
+  async createStudent(data: CreateStudentRequest): Promise<CreateUserResponse> {
+    try {
+      const response = await httpBackOfficePost<CreateUserResponse>('/backoffice/users/student', data);
+      return response;
+    } catch (error) {
+      console.error('Failed to create student:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Export a single user's data as CSV
+   * @param userId The user id to export
+   */
+  async exportUser(userId: string): Promise<Blob> {
+    try {
+      const response = await fetch(
+        `https://apis.dojoconnect.app/api/backoffice/users/${userId}/export`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('dojoconnect_token') || ''}`,
+          },
+        }
+      );
+      if (!response.ok) throw new Error('Failed to export user');
+      return await response.blob();
+    } catch (error) {
+      console.error('Failed to export user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a user's profile fields
+   * @param userId backend id or email identifier
+   */
+  async updateUser(userId: string, data: Partial<CreateStudentRequest & CreateInstructorRequest & CreateDojoOwnerRequest>): Promise<CreateUserResponse> {
+    try {
+      const response = await httpBackOfficePatch<CreateUserResponse>(`/backoffice/users/${userId}`, data);
+      return response;
+    } catch (error) {
+      console.error('Failed to update user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user's status (active/inactive/disabled)
+   */
+  async updateUserStatus(userId: string, status: string): Promise<CreateUserResponse> {
+    try {
+      const response = await httpBackOfficePatch<CreateUserResponse>(`/backoffice/users/${userId}/status`, { status });
+      return response;
+    } catch (error) {
+      console.error('Failed to update user status:', error);
       throw error;
     }
   }
@@ -191,6 +273,34 @@ class BackOfficeUsersService {
     } catch (error) {
       console.error('Failed to delete user:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get a single user by id, return null for 401/404 instead of throwing.
+   */
+  async getUserById(userId: string): Promise<User | null> {
+    try {
+      const response = await httpBackOfficeGet<any>(`/backoffice/users/${userId}`);
+      const d = response?.data || response || null;
+      if (!d) return null;
+      // normalize minimal fields
+      return {
+        id: d.id,
+        firstName: d.firstName || d.first_name || '',
+        lastName: d.lastName || d.last_name || '',
+        email: d.email || d.user_email || '',
+        avatarUrl: d.avatarUrl || d.avatar || resolveImageUrl(d) || null,
+        role: d.role || 'parent',
+        joinedDate: d.createdAt || d.created_at || null,
+        lastActivity: d.lastActivity || d.last_activity || null,
+        status: d.status || 'active'
+      } as User;
+    } catch (err: any) {
+      // If unauthorized or not found, return null to allow graceful UI fallback
+      if (err?.response?.status === 401 || err?.response?.status === 404) return null;
+      console.error('getUserById failed', err);
+      throw err;
     }
   }
 }

@@ -11,10 +11,12 @@ import ChildrenTable from '@/components/users/ParentProfile/ChildrenTable';
 import ClassesTable from '@/components/users/ParentProfile/ClassTable'; // <-- FIXED
 import ActivitiesTable from '@/components/users/ParentProfile/ActivitiesTable';
 import SubscriptionTable from "@/components/users/ParentProfile/SubscriptionTable";
-import SubscriptionSummary from "@/components/users/ParentProfile/SubscriptionSummary";
-import PaymentMethod from "@/components/users/ParentProfile/PaymentMethod";import SearchActionBar from '../../../../../components/users/ParentProfile/SearchActionBar';
+import SubscriptionSummary from '@/components/users/ParentProfile/SubscriptionSummary';
+import PaymentMethod from '@/components/users/ParentProfile/PaymentMethod';
+import SearchActionBar from '@/components/users/ParentProfile/SearchActionBar';
 import SearchActionBarCreateNew from '@/components/users/ParentProfile/SearchActionBarCreateNew';
 import Pagination from '@/components/users/Pagination';
+import { boParentService } from '@/services/bo-parent.service';
 
 const tabs = [
   "Overview",
@@ -36,6 +38,23 @@ export default function ParentProfilePage() {
   const [email, setEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Paginated resources state
+  const [childrenData, setChildrenData] = useState<any[]>([]);
+  const [childrenMeta, setChildrenMeta] = useState({ page: 1, limit: 20, totalCount: 0, totalPages: 1 });
+  const [childrenLoading, setChildrenLoading] = useState(false);
+
+  const [classesData, setClassesData] = useState<any[]>([]);
+  const [classesMeta, setClassesMeta] = useState({ page: 1, limit: 20, totalCount: 0, totalPages: 1 });
+  const [classesLoading, setClassesLoading] = useState(false);
+
+  const [billingData, setBillingData] = useState<any[]>([]);
+  const [billingMeta, setBillingMeta] = useState({ page: 1, limit: 20, totalCount: 0, totalPages: 1 });
+  const [billingLoading, setBillingLoading] = useState(false);
+
+  const [activitiesData, setActivitiesData] = useState<any[]>([]);
+  const [activitiesMeta, setActivitiesMeta] = useState({ page: 1, limit: 20, totalCount: 0, totalPages: 1 });
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+
   useEffect(() => {
     async function fetchProfile() {
       setLoading(true);
@@ -47,25 +66,53 @@ export default function ParentProfilePage() {
         return;
       }
       try {
-        // Get email by id
-        const reUsers = await fetch("https://www.backoffice-api.dojoconnect.app/get_users");
-        if (!reUsers.ok) throw new Error("Failed to fetch users");
-        const usersData = await reUsers.json();
-        const user = usersData.data.find((u: any) => String(u.id) === String(id));
-        if (!user?.email) {
-          setProfile(null);
-          setEmail(null);
-          setLoading(false);
-          setError("User not found.");
-          return;
-        }
-        setEmail(user.email);
+        // Fetch parent profile and related resources via service
+        const parentResp = await boParentService.getParentProfile(String(id));
+        const parent = parentResp.data;
 
-        // Get detailed profile (role-specific)
-        const resProfile = await fetch(`https://apis.dojoconnect.app/user_profile_detailed/${user.email}`);
-        if (!resProfile.ok) throw new Error("Profile not found for this email.");
-        const profileData = await resProfile.json();
-        setProfile(profileData.data);
+        // Fetch paginated resources (initial page)
+        await Promise.all([
+          fetchChildrenPage(1),
+          fetchClassesPage(1),
+          fetchBillingPage(1),
+          fetchActivitiesPage(1),
+        ]);
+
+        const mappedProfile: any = {
+          id: parent.id,
+          name: `${parent.firstName} ${parent.lastName}`,
+          email: parent.email,
+          role: parent.role,
+          status: parent.status,
+          city: parent.city,
+          street: parent.street,
+          created_at: parent.createdAt,
+          lastActivityAt: parent.lastActivityAt,
+          parentId: parent.parentId,
+          classImg: (parent as any).avatarUrl || null,
+          className: `${parent.firstName} ${parent.lastName}`,
+          // summary lists will render current page items; full counts are in meta
+          enrolled_children: [],
+          enrolled_classes: [],
+          subscription_history: [],
+          subscription_status: null,
+          payment_method: null,
+          activities: [],
+        };
+
+        // fetch subscription (non-paginated)
+        try {
+          const subscriptionResp = await boParentService.getParentSubscription(String(id));
+            // subscriptionResp.data may contain different shapes depending on backend
+            // prefer a `subscription` object if present, otherwise try to map card info
+            const subData = subscriptionResp?.data as any;
+            mappedProfile.subscription_status = subData?.subscription ?? null;
+            mappedProfile.payment_method = subData?.card ?? subData ?? null;
+        } catch (e) {
+          // ignore
+        }
+
+        setProfile(mappedProfile);
       } catch (err: any) {
         setError(err.message || "An error occurred.");
         setProfile(null);
@@ -75,6 +122,138 @@ export default function ParentProfilePage() {
     }
     fetchProfile();
   }, [id]);
+
+  // Paginated fetch helpers
+  const fetchChildrenPage = async (page: number) => {
+    if (!id) return;
+    setChildrenLoading(true);
+    try {
+      const res = await boParentService.getParentChildren(String(id), { page, limit: childrenMeta.limit });
+      setChildrenData((res.data || []).map((c: any) => ({
+        id: c.id,
+        name: `${c.firstName} ${c.lastName}`,
+        email: c.email,
+        enrolledDate: c.enrolledAt,
+        lastActivity: c.updatedAt || c.lastActivity || null,
+        status: c.status,
+        avatar: c.avatarUrl || null,
+        studentId: c.studentId,
+        experienceLevel: c.experienceLevel,
+      })));
+      if (res.meta) setChildrenMeta(res.meta as any);
+    } catch (e) {
+      console.error('Failed to fetch children page', e);
+    }
+    setChildrenLoading(false);
+  };
+
+  const fetchClassesPage = async (page: number) => {
+    if (!id) return;
+    setClassesLoading(true);
+    try {
+      const res = await boParentService.getParentClasses(String(id), { page, limit: classesMeta.limit });
+      setClassesData((res.data || []).map((cl: any) => ({
+        id: cl.enrollmentId || cl.classId,
+        className: cl.className,
+        classImg: cl.classImg || null,
+        classLevel: cl.classLevel,
+        instructor: cl.instructor || { name: cl.instructorName || '', avatar: cl.instructorAvatar || null },
+        enrollmentDate: cl.enrolledAt,
+        status: cl.classStatus || (cl.enrollmentActive ? 'active' : 'inactive'),
+        classId: cl.classId,
+      })));
+      if (res.meta) setClassesMeta(res.meta as any);
+    } catch (e) {
+      console.error('Failed to fetch classes page', e);
+    }
+    setClassesLoading(false);
+  };
+
+  const fetchBillingPage = async (page: number) => {
+    if (!id) return;
+    setBillingLoading(true);
+    try {
+      const res = await boParentService.getParentBillingHistory(String(id), { page, limit: billingMeta.limit });
+      setBillingData(res.data || []);
+      if (res.meta) setBillingMeta(res.meta as any);
+    } catch (e) {
+      console.error('Failed to fetch billing page', e);
+    }
+    setBillingLoading(false);
+  };
+
+  const fetchActivitiesPage = async (page: number) => {
+    if (!id) return;
+    setActivitiesLoading(true);
+    try {
+      const res = await boParentService.getParentActivities(String(id), { page, limit: activitiesMeta.limit });
+      setActivitiesData((res.data || []).map((a: any) => ({
+        id: a.id,
+        type: a.type,
+        title: a.title,
+        message: a.message,
+        metaData: a.metaData,
+        createdAt: a.createdAt,
+      })));
+      if (res.meta) setActivitiesMeta(res.meta as any);
+    } catch (e) {
+      console.error('Failed to fetch activities page', e);
+    }
+    setActivitiesLoading(false);
+  };
+
+  // Helper to download blob with filename
+  const downloadBlob = async (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Export handlers
+  const handleExportChildren = async () => {
+    if (!id) return;
+    try {
+      const blob = await boParentService.exportParentChildren(String(id));
+      await downloadBlob(blob, `parent-${id}-children.csv`);
+    } catch (err) {
+      console.error('Failed to export children', err);
+    }
+  };
+
+  const handleExportClasses = async () => {
+    if (!id) return;
+    try {
+      const blob = await boParentService.exportParentClasses(String(id));
+      await downloadBlob(blob, `parent-${id}-classes.csv`);
+    } catch (err) {
+      console.error('Failed to export classes', err);
+    }
+  };
+
+  const handleExportBilling = async () => {
+    if (!id) return;
+    try {
+      const blob = await boParentService.exportParentBillingHistory(String(id));
+      await downloadBlob(blob, `parent-${id}-billing-history.csv`);
+    } catch (err) {
+      console.error('Failed to export billing history', err);
+    }
+  };
+
+  const handleExportActivities = async () => {
+    if (!id) return;
+    try {
+      const blob = await boParentService.exportParentActivities(String(id));
+      await downloadBlob(blob, `parent-${id}-activities.csv`);
+    } catch (err) {
+      console.error('Failed to export activities', err);
+    }
+  };
 
   if (loading) return <MainLayout><div>Loading...</div></MainLayout>;
   if (!profile) return <MainLayout><div>{error}</div></MainLayout>;
@@ -92,19 +271,38 @@ export default function ParentProfilePage() {
             <>
               <ProfileOverview profile={profile} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
-                <EnrolledChildren childrenData={profile.enrolled_children || []} />
-                <EnrolledClasses classesData={profile.enrolled_classes || []} />
+                <EnrolledChildren childrenData={childrenData.slice(0,5)} />
+                <EnrolledClasses classesData={classesData.slice(0,5)} />
               </div>
             </>
           )}
+          {/* Pass parentId and refresh handler to CreateNew component */}
           {activeTab === "Children" && (
             <div>
-              <ChildrenTable childrenData={profile.enrolled_children || []} />
+              <ChildrenTable
+                childrenData={childrenData}
+                onExport={handleExportChildren}
+                currentPage={childrenMeta.page}
+                rowsPerPage={childrenMeta.limit}
+                totalRows={childrenMeta.totalCount}
+                onPageChange={fetchChildrenPage}
+                loading={childrenLoading}
+                parentId={String(id)}
+                onChildCreated={() => fetchChildrenPage(1)}
+              />
             </div>
           )}
           {activeTab === "Classes" && (
             <div>
-              <ClassesTable classesData={profile.enrolled_classes || []} />
+              <ClassesTable
+                classesData={classesData}
+                onExport={handleExportClasses}
+                currentPage={classesMeta.page}
+                rowsPerPage={classesMeta.limit}
+                totalRows={classesMeta.totalCount}
+                onPageChange={fetchClassesPage}
+                loading={classesLoading}
+              />
             </div>
           )}
           {activeTab === "Subscription" && (
@@ -122,17 +320,24 @@ export default function ParentProfilePage() {
           <PaymentMethod method={profile.payment_method} />
         </div>
         <div className="mt-8">
-          <div className="flex items-center justify-between bg-gray-100 px-4 py-3 rounded-md mb-2">
+            <div className="flex items-center justify-between bg-gray-100 px-4 py-3 rounded-md mb-2">
             <span className="font-semibold text-gray-700 text-lg">Billing history</span>
-            <button className="flex items-center bg-red-500 text-white px-4 py-2 rounded-md cursor-pointer hover:bg-red-600">
+            <button onClick={handleExportBilling} className="flex items-center bg-red-500 text-white px-4 py-2 rounded-md cursor-pointer hover:bg-red-600">
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4m-8 8h12"/>
               </svg>
               Download
             </button>
           </div>
-          <div className="mt-4">
-            <SubscriptionTable data={profile.subscription_history} />
+            <div className="mt-4">
+            <SubscriptionTable
+              data={billingData}
+              currentPage={billingMeta.page}
+              rowsPerPage={billingMeta.limit}
+              totalRows={billingMeta.totalCount}
+              onPageChange={fetchBillingPage}
+              loading={billingLoading}
+            />
           </div>
         </div>
       </>
@@ -141,7 +346,15 @@ export default function ParentProfilePage() {
 )}
           {activeTab === "Activities" && (
             <div>
-              <ActivitiesTable activitiesData={profile.activities || []} />
+              <ActivitiesTable
+                activitiesData={activitiesData}
+                onExport={handleExportActivities}
+                currentPage={activitiesMeta.page}
+                rowsPerPage={activitiesMeta.limit}
+                totalRows={activitiesMeta.totalCount}
+                onPageChange={fetchActivitiesPage}
+                loading={activitiesLoading}
+              />
             </div>
           )}
         </div>

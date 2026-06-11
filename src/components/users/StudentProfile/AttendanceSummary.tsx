@@ -1,8 +1,8 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { FaUser, FaChevronDown, FaExclamationCircle } from "react-icons/fa";
+import { FaUser, FaChevronDown, FaExclamationCircle, FaEllipsisV } from "react-icons/fa";
 import { FaRegSquare } from "react-icons/fa6";
-import { FaEllipsisV } from "react-icons/fa";
+import Avatar from '@/components/ui/Avatar';
 
 const months = [
   "January", "February", "March", "April", "May", "June",
@@ -52,7 +52,7 @@ export default function AttendanceSummaryTab({
   const attendanceStats: AttendanceStat[] = [
     {
       icon: <FaUser className="text-green-600 bg-green-100 rounded-full p-2 w-8 h-8" />,
-      days: summary.present ?? 0,
+      days: summary.present ?? summary.presentDays ?? 0,
       label: "Present",
       iconRight: <FaExclamationCircle className="text-gray-200 bg-white-200 w-5 h-5" />,
       color: "text-green-600",
@@ -60,7 +60,7 @@ export default function AttendanceSummaryTab({
     },
     {
       icon: <FaUser className="text-red-500 bg-red-100 rounded-full p-2 w-8 h-8" />,
-      days: summary.absent ?? 0,
+      days: summary.absent ?? summary.absentDays ?? 0,
       label: "Absent",
       iconRight: <FaExclamationCircle className="text-gray-200 bg-white-200 w-5 h-5" />,
       color: "text-red-500",
@@ -68,7 +68,7 @@ export default function AttendanceSummaryTab({
     },
     {
       icon: <FaRegSquare className="text-yellow-500 bg-yellow-100 rounded p-2 w-8 h-8" />,
-      days: summary.lateness ?? 0,
+      days: summary.lateness ?? summary.lateDays ?? 0,
       label: "Lateness",
       color: "text-yellow-500",
       bg: "bg-yellow-100",
@@ -177,7 +177,12 @@ export default function AttendanceSummaryTab({
                     <input type="checkbox" />
                   </td>
                   <td className="p-3 flex items-center gap-2">
-                    <img src={cls.classImg || "/classImage.png"} alt={cls.className} className="w-8 h-8 rounded-full" />
+                    {
+                      (() => {
+                        const src = cls.classImg ? (cls.classImg.startsWith('http') ? cls.classImg : `${process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL}/${cls.classImg}`) : null;
+                        return <Avatar src={src} alt={cls.className} size={32} className="w-8 h-8 rounded-full object-cover" />;
+                      })()
+                    }
                     <span>{cls.className}</span>
                   </td>
                   <td className="p-3">{cls.totalSessions}</td>

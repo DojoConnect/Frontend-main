@@ -33,6 +33,12 @@ export interface ParentChild {
 
 export interface ParentChildrenResponse {
   data: ParentChild[];
+  meta?: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+  };
 }
 
 export interface ParentClass {
@@ -146,9 +152,12 @@ class BackOfficeParentService {
    * @param userId The parent user ID
    * @returns List of children
    */
-  async getParentChildren(userId: string): Promise<ParentChildrenResponse> {
+  async getParentChildren(userId: string, params?: PaginationParams): Promise<ParentChildrenResponse> {
     try {
-      const response = await httpBackOfficeGet<ParentChildrenResponse>(`/backoffice/parents/${userId}/children`);
+      const response = await httpBackOfficeGet<ParentChildrenResponse>(`/backoffice/parents/${userId}/children`, {
+        page: params?.page || 1,
+        limit: params?.limit || 20,
+      });
       return response;
     } catch (error) {
       console.error('Failed to fetch parent children:', error);
@@ -230,8 +239,32 @@ class BackOfficeParentService {
    */
   async getParentSubscription(userId: string): Promise<SubscriptionResponse> {
     try {
-      const response = await httpBackOfficePost<SubscriptionResponse>(`/backoffice/parents/${userId}/subscription`, {});
-      return response;
+      // Try several possible subscription endpoints (some backends use plural or different prefixes)
+      const candidates = [
+        `/backoffice/parents/${userId}/subscription`,
+        `/backoffice/parents/${userId}/subscriptions`,
+        `/parents/${userId}/subscription`,
+        `/parents/${userId}/subscriptions`,
+      ];
+
+      for (const p of candidates) {
+        try {
+          const response = await httpBackOfficeGet<SubscriptionResponse>(p);
+          return response;
+        } catch (err: any) {
+          // if 404 or route-not-found, try next candidate
+          const status = err?.response?.status;
+          const msg = err?.message || '';
+          if (status === 404 || /route not found/i.test(String(msg))) {
+            continue;
+          }
+          // other errors should bubble up
+          throw err;
+        }
+      }
+
+      // If none matched, throw a not-found style error
+      throw new Error('Parent subscription route not found');
     } catch (error) {
       console.error('Failed to fetch parent subscription:', error);
       throw error;

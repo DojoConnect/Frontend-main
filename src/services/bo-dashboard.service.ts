@@ -55,12 +55,66 @@ class BackOfficeDashboardService {
    * Get dojos revenue breakdown for dashboard
    * @returns List of dojos with their revenue and percentage
    */
-  async getDojosRevenue(): Promise<DojosRevenueResponse> {
+  async getDojosRevenue(payload: any = {}): Promise<DojosRevenueResponse> {
     try {
-      const response = await httpBackOfficePost<DojosRevenueResponse>('/backoffice/dashboard/dojos/revenue', {});
-      return response;
+      // Some backends accept POST with payload, others expect GET — try POST first, then fallback to GET
+      try {
+        const response = await httpBackOfficePost<DojosRevenueResponse>('/backoffice/dashboard/dojos/revenue', payload);
+        return response;
+      } catch (postErr) {
+        console.warn('POST /backoffice/dashboard/dojos/revenue failed, trying GET fallback', postErr);
+        // Try GET fallback with query params
+        const params = payload || {};
+        const getResp = await httpBackOfficeGet<DojosRevenueResponse>('/backoffice/dashboard/dojos/revenue', params);
+        return getResp;
+      }
     } catch (error) {
       console.error('Failed to fetch dojos revenue:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get overall revenue summary
+   */
+  async getRevenueSummary(): Promise<{ data: any }> {
+    try {
+      const response = await httpBackOfficeGet<{ data: any }>('/backoffice/revenue');
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch revenue summary:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get payment history (paginated)
+   */
+  async getPaymentHistory(page = 1, limit = 20): Promise<{ data: any[]; meta?: any }> {
+    try {
+      const resp = await httpBackOfficeGet<{ data: any[]; meta?: any }>(`/backoffice/revenue/payment-history`, { page, limit });
+      return resp;
+    } catch (error) {
+      console.error('Failed to fetch payment history:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Export payment history as CSV (returns Blob)
+   */
+  async exportPaymentHistory(): Promise<Blob> {
+    try {
+      const response = await fetch(`https://apis.dojoconnect.app/api/backoffice/revenue/payment-history/export`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('dojoconnect_token') || ''}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to export payment history');
+      return await response.blob();
+    } catch (error) {
+      console.error('Failed to export payment history:', error);
       throw error;
     }
   }

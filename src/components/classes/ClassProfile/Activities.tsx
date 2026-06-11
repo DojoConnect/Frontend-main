@@ -1,5 +1,6 @@
 import { FaEllipsisV } from "react-icons/fa";
 import SearchActionBar from './SearchActionBar'
+import { formatDateCustom } from '@/lib/dateFormatter';
 
 export default function ActivitiesTable({ activities }: { activities: any[] }) {
   // Empty state
@@ -31,19 +32,19 @@ export default function ActivitiesTable({ activities }: { activities: any[] }) {
       <div className="rounded-md border border-gray-200 bg-white px-2 sm:px-6 py-3 sm:py-4 overflow-x-auto">
         <table className="min-w-[600px] w-full text-xs sm:text-sm">
           <thead>
-            <tr className="bg-white-50">
-              <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-gray-500 font-semibold">Activity Type</th>
-              <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-gray-500 font-semibold">Description</th>
-              <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-gray-500 font-semibold">Date & Time Added</th>
+            <tr className="bg-gray-100 border-b border-gray-300">
+              <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-gray-600 font-semibold">Activity Type</th>
+              <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-gray-600 font-semibold">Description</th>
+              <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-gray-600 font-semibold">Date & Time Added</th>
               <th className="px-2 py-2 sm:px-4 sm:py-3"></th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
             {activities.map((activity) => (
               <tr key={activity.id} className="hover:bg-gray-50 cursor-pointer">
-                <td className="px-2 py-2 sm:px-4 sm:py-3 text-gray-500">{activity.type}</td>
-                <td className="px-2 py-2 sm:px-4 sm:py-3 text-gray-500">{activity.description}</td>
-                <td className="px-2 py-2 sm:px-4 sm:py-3 text-gray-500">{activity.dateTime}</td>
+                <td className="px-2 py-2 sm:px-4 sm:py-3 text-gray-500">{activity.activityType || activity.type || ''}</td>
+                <td className="px-2 py-2 sm:px-4 sm:py-3 text-gray-500">{activity.title || activity.message || activity.description || ''}</td>
+                <td className="px-2 py-2 sm:px-4 sm:py-3 text-gray-500">{activity.createdAt || activity.created_at ? formatDateCustom(activity.createdAt || activity.created_at) : ''}</td>
                 <td className="px-2 py-2 sm:px-4 sm:py-3 text-right">
                   <span className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-md border border-gray-200 bg-white">
                     <FaEllipsisV className="text-gray-400 text-xs sm:text-base" />

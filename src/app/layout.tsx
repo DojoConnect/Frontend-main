@@ -24,7 +24,7 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#E51B1B" />
       </head>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans" suppressHydrationWarning>{children}</body>
     </html>
   );
 }
