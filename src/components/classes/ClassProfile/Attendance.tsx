@@ -7,6 +7,7 @@ type AttendanceRow = {
   id: string | number;
   avatar: string;
   name: string;
+  email?: string;
   attendance: string;
   sessionsAttended: number;
   sessionsMissed: number;
@@ -42,6 +43,7 @@ export default function AttendanceTab({
     id: r.id,
     avatar: resolveImageUrl(r) || r.avatar || r.image || r.imageUrl || r.avatarUrl || null,
     name: `${r.firstName || r.first_name || r.first || ''} ${r.lastName || r.last_name || r.last || ''}`.trim(),
+    email: r.email || r.userEmail || '',
     attendance: r.attendancePercentage ?? r.attendance_percentage ?? r.attendance ?? null,
     sessionsAttended: r.sessionsHeld ?? r.sessions_held ?? r.sessionsAttended ?? 0,
     sessionsMissed: r.sessionsMissed ?? r.sessions_missed ?? 0,
@@ -146,6 +148,7 @@ export default function AttendanceTab({
             <tr className="bg-gray-50">
               <th className="px-2 sm:px-4 py-2 sm:py-3"><input type="checkbox" /></th>
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500">Name</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500">Email</th>
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500">Attendance %</th>
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500">Sessions Attended</th>
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500">Sessions Missed</th>
@@ -162,6 +165,7 @@ export default function AttendanceTab({
                   <Avatar src={student.avatar} alt={student.name} size={32} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover" />
                   <span className="text-xs sm:text-sm">{student.name}</span>
                 </td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-500 text-xs sm:text-sm">{student.email || ''}</td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3">{student.attendance ?? ''}</td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3">{student.sessionsAttended}</td>
                 <td className="px-2 sm:px-4 py-2 sm:py-3">{student.sessionsMissed}</td>

@@ -118,13 +118,24 @@ export default function StudentProfilePage() {
           const res = await boStudentService.getStudentSubscription(id as string);
           setSubscriptionData(res.data || null);
         }
-        if (activeTab === 'Activities') {
+        if (activeTab === 'Activities' || activeTab === 'Overview') {
           const res = await boStudentService.getStudentActivities(id as string);
           setActivitiesData((res.data || []).map((a: any) => ({
             ...a,
             description: a.title || a.message || a.description || '',
             date: a.createdAt || a.created_at || null,
             type: a.activityType || a.type || '',
+          })));
+        }
+        if (activeTab === 'Overview') {
+          const res = await boStudentService.getStudentClasses(id as string);
+          setClassesData((res.data || []).map((cls: any) => ({
+            ...cls,
+            className: cls.className || cls.class_name || cls.name || cls.dojoName || '',
+            classLevel: cls.classLevel || cls.level || '',
+            instructorName: cls.instructorName || cls.instructor_name || '',
+            enrollmentDate: cls.enrollmentDate || cls.enrolledAt || cls.enrolled_at || '',
+            status: cls.enrollmentActive === true ? 'active' : cls.enrollmentActive === false ? 'inactive' : (cls.status || ''),
           })));
         }
       } catch (err) {
@@ -144,55 +155,40 @@ if (!["student", "child"].includes((profile.role || "").toLowerCase())) {
       <div className="p-6">
         <ProfileHeader profile={profile} onBack={() => router.push('/dashboard?tab=users')} />
         <ProfileTabs tabs={[...tabs]} activeTab={activeTab} setActiveTab={setActiveTab} />
-        {activeTab === "Overview" && <ProfileOverview profile={profile} />}
+        {activeTab === "Overview" && <ProfileOverview profile={profile} classes={classesData} activities={activitiesData} setActiveTab={setActiveTab as (tab: string) => void} />}
         {activeTab === "Classes" && <ClassesTab classes={classesData || []} />}
         {activeTab === "Attendance Summary" && <AttendanceSummary summary={attendanceData || {}} />}
-{activeTab === "Subscription" && (
-  (!subscriptionData) ? (
+{activeTab === "Subscription" && (() => {
+  const sub = subscriptionData?.subscription ?? subscriptionData;
+  const card = subscriptionData?.card ?? null;
+  const hasSub = !!sub;
+  const billingHistory = subscriptionData?.billingHistory || subscriptionData?.payments || subscriptionData?.history || [];
+  return !hasSub ? (
     <div className="flex flex-col items-center justify-center py-16 bg-white rounded-lg border min-h-[320px]">
-      <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" fill="none">
-        <path fill="url(#a)" d="M75 150c41.421 0 75-33.579 75-75S116.421 0 75 0 0 33.579 0 75s33.579 75 75 75Z"/>
-        <path fill="#fff" d="M120 150H30V53a16.018 16.018 0 0 0 16-16h58a15.906 15.906 0 0 0 4.691 11.308A15.89 15.89 0 0 0 120 53v97Z"/>
-        <path fill="#E51B1B" d="M75 102c13.255 0 24-10.745 24-24S88.255 54 75 54 51 64.745 51 78s10.745 24 24 24Z"/>
-        <path fill="#fff" d="M83.485 89.314 75 80.829l-8.485 8.485-2.829-2.829L72.172 78l-8.486-8.485 2.829-2.829L75 75.172l8.485-8.486 2.829 2.829L77.828 78l8.486 8.485-2.829 2.829Z"/>
-        <path fill="#FCDEDE" d="M88 108H62a3 3 0 1 0 0 6h26a3 3 0 1 0 0-6ZM97 120H53a3 3 0 1 0 0 6h44a3 3 0 1 0 0-6Z"/>
-        <defs>
-          <linearGradient id="a" x1="75" x2="75" y1="0" y2="150" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#FCEDED"/>
-            <stop offset="1" stopColor="#FCDEDE"/>
-          </linearGradient>
-        </defs>
-      </svg>
       <div className="mt-6 text-black font-semibold text-lg">No Subscription Information</div>
       <div className="mt-2 text-gray-500 text-sm">No subscription data available for this user.</div>
     </div>
   ) : (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-        <div className="h-full flex flex-col">
-          <SubscriptionSummary summary={subscriptionData || {}} />
-        </div>
-        <div className="h-full flex flex-col">
-          <PaymentMethod method={profile.payment_method || {}} />
-        </div>
+        <SubscriptionSummary summary={sub} />
+        <PaymentMethod method={card} />
       </div>
       <div className="mt-8">
-        <div className="flex items-center justify-between bg-white-200 px-4 py-3 rounded-md border-b border-gray-200 mb-2">
-          <span className="font-semibold text-gray-700 text-lg">Billing history</span>
-          <button className="flex items-center bg-red-500 text-white px-4 py-2 rounded-md cursor-pointer hover:bg-red-600">
+        <div className="flex items-center justify-between px-4 py-3 mb-2">
+          <span className="font-semibold text-gray-800 text-base">Billing History</span>
+          <button className="flex items-center bg-white border border-red-600 text-red-600 px-4 py-2 rounded-md text-sm hover:bg-red-50">
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4m-8 8h12"/>
             </svg>
-            Download
+            Export
           </button>
         </div>
-        <div className="mt-4">
-          <SubscriptionTable data={profile.subscription_history || []} />
-        </div>
+        <SubscriptionTable data={billingHistory} />
       </div>
     </>
-  )
-)}
+  );
+})()}
         {activeTab === "Activities" && <ActivitiesTab activities={activitiesData || []} />}
       </div>
     </MainLayout>

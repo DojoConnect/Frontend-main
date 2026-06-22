@@ -4,6 +4,14 @@ import SearchActionBar from "./SearchActionBar";
 import Pagination from "./Pagination";
 import Avatar from '@/components/ui/Avatar';
 import { resolveImageUrl } from '@/lib/imageUrl';
+import { formatDateCustom } from '@/lib/dateFormatter';
+
+const safeInstructorName = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') return val.name || val.fullName || '';
+  return '';
+};
 
 interface ClassItem {
   id: number | string;
@@ -12,6 +20,7 @@ interface ClassItem {
   classLevel?: string;
   instructorImg?: string;
   instructorName?: string;
+  instructor?: any;
   enrollmentDate: string;
   status: string;
 }
@@ -79,11 +88,11 @@ export default function ClassesTab({ classes = [] }: ClassesTabProps) {
                     <td className="p-3 text-xs md:text-sm">{cls.classLevel}</td>
                   <td className="p-3 flex items-center gap-2">
                       {cls.instructorImg && (
-                        <Avatar src={cls.instructorImg} alt={cls.instructorName} size={32} className="w-8 h-8 rounded-full" />
+                        <Avatar src={cls.instructorImg} alt={safeInstructorName(cls.instructorName || cls.instructor)} size={32} className="w-8 h-8 rounded-full" />
                       )}
-                      <span className="text-xs md:text-sm">{cls.instructorName}</span>
+                      <span className="text-xs md:text-sm">{safeInstructorName(cls.instructorName || cls.instructor)}</span>
                   </td>
-                    <td className="p-3 text-xs md:text-sm">{cls.enrollmentDate}</td>
+                    <td className="p-3 text-xs md:text-sm">{cls.enrollmentDate ? formatDateCustom(cls.enrollmentDate) : ''}</td>
                     <td className="p-3">
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${String(cls.status || '').toLowerCase() === 'inactive' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{cls.status}</span>
                     </td>

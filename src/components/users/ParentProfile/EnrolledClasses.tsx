@@ -13,8 +13,8 @@ const EnrolledClasses: React.FC<EnrolledClassesProps> = ({ classesData }) => {
 
   return (
     <div>
-      <div className="flex items-center justify-between bg-gray-100 rounded-md px-6 py-4 mb-4">
-        <span className="text-black font-semibold text-base">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-gray-800 font-semibold text-base">
           Enrolled Classes ({hasClasses ? classesData.length : 0})
         </span>
         <button
@@ -51,7 +51,7 @@ const EnrolledClasses: React.FC<EnrolledClassesProps> = ({ classesData }) => {
                     {cls.classLevel || cls.level ? `- ${cls.classLevel || cls.level}` : ''}
                   </div>
                   <div className="text-gray-500 text-xs sm:text-sm">
-                    {cls.instructorName || (cls.instructor && (cls.instructor.name || cls.instructor)) || ''}
+                    {cls.instructorName || (typeof cls.instructor === 'object' ? cls.instructor?.name : cls.instructor) || ''}
                   </div>
                 </div>
               </div>

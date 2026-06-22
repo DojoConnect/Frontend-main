@@ -33,17 +33,17 @@ export default function ProfileHeader({
         <span className="text-red-600 text-xs sm:text-sm font-semibold">Class Profile</span>
       </div>
       {/* Profile Info Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center items-start justify-start mb-6 sm:mb-8 gap-4">
-        <Avatar src={imgSrc} alt={profile.className || 'class'} size={64} className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover" />
-        <div className="flex-1 flex flex-col items-start">
-          <div className="text-base sm:text-xl font-bold truncate w-full">{profile.className}</div>
-          <div className="text-gray-500 text-xs sm:text-sm mt-1">{profile.classLevel}</div>
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <Avatar src={imgSrc} alt={profile.className || 'class'} size={64} className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover" />
+          <div className="flex flex-col items-start">
+            <div className="text-base sm:text-2xl font-bold">{profile.className}</div>
+            <div className="text-gray-500 text-xs sm:text-sm mt-1">{profile.classLevel}</div>
+          </div>
         </div>
-        <div className="self-start sm:self-center">
-          <button className="bg-green-600 text-white rounded-full px-3 sm:px-5 py-1 sm:py-2 text-xs sm:text-sm font-semibold">
-            {profile.status}
-          </button>
-        </div>
+        <button className="bg-green-600 text-white rounded-full px-4 py-1.5 sm:px-6 sm:py-2 text-xs sm:text-sm font-semibold">
+          {profile.status}
+        </button>
       </div>
     </>
   );

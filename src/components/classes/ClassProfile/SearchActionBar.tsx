@@ -33,9 +33,9 @@ export default function SearchActionsBar() {
         </div>
       </div>
       {/* Export Button */}
-      <button className="flex items-center gap-2 bg-red-600 text-white rounded-md px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium shadow hover:bg-red-700 transition w-full sm:w-auto justify-center">
+      <button className="flex items-center gap-2 bg-white border border-red-600 text-red-600 rounded-md px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium hover:bg-red-50 transition w-full sm:w-auto justify-center">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path d="M12 5v14m7-7H5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M12 4v12m0 0l-4-4m4 4l4-4m-8 8h12" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         Export
       </button>

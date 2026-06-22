@@ -23,9 +23,11 @@ interface ParentProfile {
 
 interface ProfileOverviewProps {
   profile: ParentProfile;
+  childrenCount?: number;
+  classGroupCount?: number;
 }
 
-export default function ProfileOverview({ profile }: ProfileOverviewProps) {
+export default function ProfileOverview({ profile, childrenCount, classGroupCount }: ProfileOverviewProps) {
   const [showActions, setShowActions] = useState(false);
   const [modal, setModal] = useState<null | "deactivate" | "export" | "delete" | "status">(null);
   const [editMode, setEditMode] = useState(false);
@@ -244,8 +246,8 @@ export default function ProfileOverview({ profile }: ProfileOverviewProps) {
   return (
     <div>
       {/* Basic User information header */}
-      <div className="flex items-center justify-between rounded-md bg-gray-100 px-6 py-4 mb-6">
-        <span className="text-black font-semibold text-base">Basic User information</span>
+      <div className="flex items-center justify-between mb-4 w-full">
+        <span className="text-gray-800 font-semibold text-base">Basic User Information</span>
         <div className="relative">
           <button
             className="flex items-center gap-2 bg-white rounded-md px-4 py-2 border border-gray-400 text-gray-700 font-medium shadow-sm hover:bg-gray-50 transition cursor-pointer"
@@ -415,7 +417,7 @@ export default function ProfileOverview({ profile }: ProfileOverviewProps) {
             <FaUser className="text-gray-400 w-5 h-5" />
             <div>
               <div className="text-gray-500 text-xs">Number of children</div>
-              <div className="text-black font-medium">{fallback(localProfile.childrenCount)}</div>
+              <div className="text-black font-medium">{childrenCount ?? fallback(localProfile.childrenCount)}</div>
             </div>
           </div>
           {/* Class Group(s) */}
@@ -423,7 +425,7 @@ export default function ProfileOverview({ profile }: ProfileOverviewProps) {
             <FaUser className="text-gray-400 w-5 h-5" />
             <div>
               <div className="text-gray-500 text-xs">Class group(s)</div>
-              <div className="text-black font-medium">{fallback(localProfile.classGroups)}</div>
+              <div className="text-black font-medium">{classGroupCount ?? fallback(localProfile.classGroups)}</div>
             </div>
           </div>
           {/* Subscription Status (future) */}

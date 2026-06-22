@@ -4,7 +4,6 @@ import { boUsersService } from '@/services/bo-users.service';
 import { boClassesService } from '@/services/bo-classes.service';
 import CloudinaryImage from '@/components/ui/CloudinaryImage';
 import Avatar from '@/components/ui/Avatar';
-import { useUserClasses } from "../../../hooks/useUserClasses";
 import { FaUser, FaEnvelope, FaCopy, FaCalendarAlt, FaChevronDown } from "react-icons/fa";
 import { formatDateCustom } from "@/lib/dateFormatter";
 
@@ -29,6 +28,8 @@ interface OverviewProps {
     activities?: any[];
   };
   email: string;
+  activities?: any[];
+  setActiveTab?: (tab: string) => void;
 }
 
 const formatDate = (dateStr?: string | null) => {
@@ -50,8 +51,7 @@ const formatFrequency = (freq?: string) => {
 const fallback = (val: any, alt: string = "-") =>
   val !== undefined && val !== null && val !== "" ? val : alt;
 
-const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
-  const { classes, loading } = useUserClasses(email);
+const Overview: React.FC<OverviewProps> = ({ profile, email, activities: activitiesProp, setActiveTab }) => {
   const router = useRouter();
   const [showActions, setShowActions] = useState(false);
   const [modal, setModal] = useState<null | "deactivate" | "export" | "delete" | "saveConfirm">(null);
@@ -254,8 +254,8 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between bg-gray-100 rounded-md px-4 py-2 mb-4 w-full">
-        <span className="text-gray-700 font-semibold">Basic user information</span>
+      <div className="flex items-center justify-between mb-4 w-full">
+        <span className="text-gray-800 font-semibold text-base">Basic User Information</span>
         <div className="relative">
           <button
             className="flex items-center border border-gray-500 rounded-md px-6 py-3 bg-white text-black cursor-pointer"
@@ -405,20 +405,20 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
         <div className="flex flex-col md:flex-row gap-6">
           {/* Assigned Classes Card */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between bg-gray-100 rounded-md px-4 py-2 mb-2">
-              <span className="text-gray-700 font-semibold">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-gray-800 font-semibold text-base">
                 Assigned Classes ({((localProfile.assigned_classes && localProfile.assigned_classes.length) ? localProfile.assigned_classes.length : backendAssignedClasses.length)})
               </span>
               <button
                 className="text-[#E51B1B] text-sm font-semibold hover:underline focus:outline-none bg-transparent border-none px-0 py-0"
-                onClick={() => router.push('/dashboard?tab=classes')}
+                onClick={() => setActiveTab ? setActiveTab("Assigned Classes") : router.push('/dashboard?tab=classes')}
               >
                 View All
               </button>
             </div>
             {(((localProfile.assigned_classes && localProfile.assigned_classes.length > 0) ? localProfile.assigned_classes : backendAssignedClasses) && ((localProfile.assigned_classes && localProfile.assigned_classes.length > 0) ? localProfile.assigned_classes : backendAssignedClasses).length > 0) ? (
               <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-4">
-                {((localProfile.assigned_classes && localProfile.assigned_classes.length > 0) ? localProfile.assigned_classes : backendAssignedClasses).map((cls: any, idx: number) => (
+                {((localProfile.assigned_classes && localProfile.assigned_classes.length > 0) ? localProfile.assigned_classes : backendAssignedClasses).slice(0, 2).map((cls: any, idx: number) => (
                   <div key={cls.class_uid || cls.id || idx} className="flex flex-col md:flex-row md:items-center gap-4 border-b border-gray-100 pb-4 last:border-b-0">
                     <div className="flex items-center gap-4 flex-1">
                       {cls.imagePublicId || cls.public_id || cls.image_public_id ? (
@@ -476,15 +476,21 @@ const Overview: React.FC<OverviewProps> = ({ profile, email }) => {
           </div>
           {/* Activity Log Card */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between bg-gray-100 rounded-md px-4 py-2 mb-2">
-              <span className="text-gray-700 font-semibold">Activity Log</span>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-gray-800 font-semibold text-base">Activity Log</span>
+              <button
+                className="text-[#E51B1B] text-sm font-semibold hover:underline focus:outline-none bg-transparent border-none px-0 py-0"
+                onClick={() => setActiveTab ? setActiveTab("Activites") : undefined}
+              >
+                View All
+              </button>
             </div>
-            {(Array.isArray(localProfile.activityLog) && localProfile.activityLog.length > 0) ? (
+            {(Array.isArray(activitiesProp) && activitiesProp.length > 0) ? (
               <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-4">
-                {localProfile.activityLog.map((act: any, idx: number) => (
+                {activitiesProp.slice(0, 2).map((act: any, idx: number) => (
                   <div key={act.id || idx} className="flex items-center justify-between bg-gray-100 rounded-md px-3 py-4">
                     <div>
-                      <div className="font-semibold text-black capitalize">{act.type || act.title || act.message || ''}</div>
+                      <div className="font-semibold text-black capitalize">{act.type || act.activityType || act.title || act.message || ''}</div>
                       <div className="text-xs text-gray-500">{formatDate(act.createdAt || act.created_at || act.date)}</div>
                     </div>
                   </div>

@@ -34,18 +34,18 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
   // Editable fields state for edit section
   const [editMode, setEditMode] = useState(false);
   const [editFields, setEditFields] = useState({
-    firstName: profile.first_name || "",
-    lastName: profile.last_name || "",
-    dojoName: profile.dojo_name || "",
-    email: profile.email || "",
-    role: profile.role || "",
-    joined: profile.joined || profile.created_at || "",
-    location: profile.location || profile.city || "",
-    currentPlan: profile.current_plan || "",
-    subscriptionType: profile.subscription_type || "",
-    paymentStatus: profile.payment_status || "",
+    firstName: profile.ownerFirstName || profile.first_name || profile.firstName || "",
+    lastName: profile.ownerLastName || profile.last_name || profile.lastName || "",
+    dojoName: profile.name || profile.dojo_name || "",
+    email: profile.ownerEmail || profile.email || "",
+    role: profile.role || "dojo_owner",
+    joined: profile.ownerCreatedAt || profile.created_at || profile.joinedDate || "",
+    location: profile.city || profile.streetAddress || profile.location || "",
+    currentPlan: profile.subscriptionBillingStatus || profile.current_plan || "",
+    subscriptionType: profile.subscriptionStripeStatus || profile.subscription_type || "",
+    paymentStatus: profile.subscriptionBillingStatus || profile.payment_status || "",
     renewalDate: profile.subscription_renewal || "",
-    accountStatus: profile.account_status || profile.status || "",
+    accountStatus: profile.ownerStatus || profile.account_status || profile.status || "",
   });
 
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,8 +156,8 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
   return (
     <div className="space-y-8">
       {/* Basic user info row */}
-      <div className="flex items-center justify-between bg-gray-100 rounded-md px-4 py-2 mb-4 w-full">
-        <span className="text-gray-700 font-semibold">Basic user information</span>
+      <div className="flex items-center justify-between mb-4 w-full">
+        <span className="text-gray-800 font-semibold text-base">Basic User Information</span>
         {/* Actions Button and Dropdown */}
         <div className="relative">
           <button
@@ -217,7 +217,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
               <FaUser className="text-gray-400 mr-3 text-xl" />
               <div>
                 <div className="text-xs text-gray-500">Dojo Owner First Name</div>
-                <div className="text-base text-black font-semibold">{fallback(profile.first_name)}</div>
+                <div className="text-base text-black font-semibold">{fallback(profile.ownerFirstName || profile.first_name || profile.firstName)}</div>
               </div>
             </div>
             <FaCopy className="text-gray-400 cursor-pointer" />
@@ -228,7 +228,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
               <FaUser className="text-gray-400 mr-3 text-xl" />
               <div>
                 <div className="text-xs text-gray-500">Dojo Owner Last Name</div>
-                <div className="text-base text-black font-semibold">{fallback(profile.last_name)}</div>
+                <div className="text-base text-black font-semibold">{fallback(profile.ownerLastName || profile.last_name || profile.lastName)}</div>
               </div>
             </div>
             <FaCopy className="text-gray-400 cursor-pointer" />
@@ -239,7 +239,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
               <FaUser className="text-gray-400 mr-3 text-xl" />
               <div>
                 <div className="text-xs text-gray-500">Dojo Name</div>
-                <div className="text-base text-black font-semibold">{fallback(profile.dojo_name)}</div>
+                <div className="text-base text-black font-semibold">{fallback(profile.name || profile.dojo_name)}</div>
               </div>
             </div>
           </div>
@@ -249,7 +249,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
               <FaEnvelope className="text-gray-400 mr-3 text-xl" />
               <div>
                 <div className="text-xs text-gray-500">Contact Email</div>
-                <div className="text-base text-black">{fallback(profile.email)}</div>
+                <div className="text-base text-black">{fallback(profile.ownerEmail || profile.email)}</div>
               </div>
             </div>
             <FaCopy className="text-gray-400 cursor-pointer" />
@@ -270,7 +270,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
               <FaCalendarAlt className="text-gray-400 mr-3 text-xl" />
               <div>
                 <div className="text-xs text-gray-500">Joined</div>
-                <div className="text-base text-black">{formatDate(profile.created_at)}</div>
+                <div className="text-base text-black">{formatDate(profile.ownerCreatedAt || profile.created_at || profile.joinedDate)}</div>
               </div>
             </div>
           </div>
@@ -282,7 +282,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
             <FaUser className="text-gray-400 mr-3 text-xl" />
             <div>
               <div className="text-xs text-gray-500">Dojo Location</div>
-              <div className="text-base text-black">{fallback(profile.location || profile.city)}</div>
+              <div className="text-base text-black">{fallback(profile.city || profile.streetAddress || profile.location)}</div>
             </div>
           </div>
           {/* Current Plan */}
@@ -290,7 +290,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
             <FaUser className="text-gray-400 mr-3 text-xl" />
             <div>
               <div className="text-xs text-gray-500">Current Plan</div>
-              <div className="text-base text-black">{fallback(profile.current_plan)}</div>
+              <div className="text-base text-black">{fallback(profile.subscriptionBillingStatus || profile.current_plan)}</div>
             </div>
           </div>
           {/* Subscription Type */}
@@ -298,7 +298,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
             <FaUser className="text-gray-400 mr-3 text-xl" />
             <div>
               <div className="text-xs text-gray-500">Subscription Type</div>
-              <div className="text-base text-black">{fallback(profile.subscription_type)}</div>
+              <div className="text-base text-black">{fallback(profile.subscriptionStripeStatus || profile.subscription_type)}</div>
             </div>
           </div>
           {/* Payment Status */}
@@ -306,7 +306,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
             <FaUser className="text-gray-400 mr-3 text-xl" />
             <div>
               <div className="text-xs text-gray-500">Payment Status</div>
-              <div className="text-base text-black">{fallback(profile.payment_status)}</div>
+              <div className="text-base text-black">{fallback(profile.subscriptionBillingStatus || profile.payment_status)}</div>
             </div>
           </div>
           {/* Subscription Renewal Date */}
@@ -322,7 +322,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ profile, dojoStats })
             <FaUser className="text-gray-400 mr-3 text-xl" />
             <div>
               <div className="text-xs text-gray-500">Account Status</div>
-              <div className="text-base text-black">{fallback(profile.account_status || profile.status)}</div>
+              <div className="text-base text-black">{fallback(profile.ownerStatus || profile.account_status || profile.status)}</div>
             </div>
           </div>
         </div>

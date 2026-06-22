@@ -12,7 +12,7 @@ interface UserSummaryProps {
 
 const cardData = [
   {
-    label: "No. of Dojo Owners",
+    label: "No. of Dojo Admins",
     valueKey: "dojoOwners",
     icon: (
       // SVG 1
@@ -386,7 +386,6 @@ export default function UserSummary({
 
   return (
    <div className="gap-4 rounded-xl">
-           {/* First row: 4 small cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {cardData.slice(0, 4).map(({ label, valueKey, icon, percent }) => (
           <div
@@ -406,7 +405,7 @@ export default function UserSummary({
  router.push(`/dashboard/users/Summary/${valueKey}`);
                 }}
               >
-                View More <ArrowRight size={13} />
+                View all <ArrowRight size={13} />
               </button>
             </div>
             <div className="flex flex-col flex-1 justify-center">
@@ -418,89 +417,6 @@ export default function UserSummary({
                   <span className="ml-1">{percentValues[valueKey]}</span>
                 </div>
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
-{/* Second row: 3 large cards, each full width in a vertical stack */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 w-full">
-        {cardData.slice(4, 7).map(({ label, valueKey, icon, percent, chart, infoIcon }, idx) => (
-          <div
-            key={label}
-            className="bg-[#FFFFFF] flex flex-col justify-between rounded-lg p-4 h-[130px] shadow-sm w-full relative cursor-pointer"
-            onClick={() => router.push(`/dashboard/users/Summary/${valueKey}`)}
-            style={{ minWidth: 0 }}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center">{icon}</div>
-              {infoIcon ? (
-                <div className="relative">
-                  <button
-                    type="button"
-                    className="focus:outline-none"
-                    onClick={e => {
-                      e.stopPropagation();
-                      setShowModal(true);
-                    }}
->
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <path d="M10 20C4.47715 20 0 15.5228 0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20ZM10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18ZM9 5H11V7H9V5ZM9 9H11V15H9V9Z" fill="#737373"/>
-                    </svg>
-                  </button>
-                  {showModal && idx === 2 && (
-                    <div
-                      className="absolute z-50 mt-2 right-0 bg-white border border-gray-300 rounded-md p-3 w-56"
-                      style={{ top: '40px', boxShadow: 'none' }}
-                    >
-                      <div className="text-gray-500 text-xs mb-3">Total logins in the last 7 days.</div>
-                      <div className="text-xs text-gray-700 space-y-0.5">
-                        <div>Dojo Admins: <span className="font-semibold text-gray-900">150</span></div>
-                        <div>Instructors: <span className="font-semibold text-gray-900">580</span></div>
-                        <div>Parents: <span className="font-semibold text-gray-900">720</span></div>
-                        <div>Students: <span className="font-semibold text-gray-900">895</span></div>
-                      </div>
-{/* Overlay for outside click */}
-                      <div
-                        className="fixed inset-0"
-                        style={{ background: 'transparent' }}
-                        onClick={() => setShowModal(false)}
-                        tabIndex={-1}
-                        aria-hidden="true"
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <button
-                  className="flex items-center gap-1 text-xs text-gray-500 font-medium hover:underline focus:outline-none"
-                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                  type="button"
-                  onClick={e => {
-                    e.stopPropagation();
-                    router.push(`/dashboard/users/Summary/${valueKey}`);
-}}
-                >
-                  View More <ArrowRight size={13} />
-                </button>
-              )}
-            </div>
-            <div className="flex items-center w-full mb-1">
-              <div className="text-lg text-[#0F1828] font-semibold">{values[valueKey] ?? 0}</div>
-            </div>
-            {/* Label row: for 7th card, order is label, chart, badge. For others, label, badge, chart */}
-            <div className="flex items-center w-full">
-              <span className="text-xs text-gray-600 truncate">{label}</span>
-              {idx === 2 && chart && (
-                <img src="/chart.svg" alt="Chart" className="h-5 w-auto mx-2" />
-              )}
-              <span className="flex-1" />
-              <div className="flex items-center bg-[#E6F4EA] text-[#15803D] rounded px-1.5 py-0.5 text-[11px] font-semibold ml-2">
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 11V3M7 3L3 7M7 3L11 7" stroke="#15803D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
- <span className="ml-1">{percentValues[valueKey]}</span>
-              </div>
-              {idx !== 2 && chart && (
-                <img src="/chart.svg" alt="Chart" className="h-5 w-auto mx-2" />
-              )}
             </div>
           </div>
         ))}

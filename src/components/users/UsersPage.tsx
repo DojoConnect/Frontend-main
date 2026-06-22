@@ -88,6 +88,7 @@ export default function UsersPage() {
         setUsers(
           response.data.map((u: any) => ({
             id: u.id,
+            dojoId: u.dojoId || null,
             name: `${u.firstName} ${u.lastName}`,
             email: u.email,
             role: u.role,
@@ -138,7 +139,8 @@ export default function UsersPage() {
   const handleUserClick = (user: any) => {
     const role = (user.role || "").toLowerCase();
     if (role === "dojo_owner" || role === "admin") {
-      router.push(`/dashboard/users/school-admin/${user.id}`);
+      const profileId = user.dojoId || user.id;
+      router.push(`/dashboard/users/school-admin/${profileId}`);
     } else if (role === "instructor") {
       router.push(`/dashboard/users/instructor/${user.id}`);
     } else if (role === "parent") {
@@ -233,65 +235,59 @@ export default function UsersPage() {
           );
         })}
       </div>
-      {/* Controls: Search, Filter, Export */}
-      <div className="flex flex-wrap gap-2 sm:gap-4 items-center justify-between bg-white rounded-xl p-2 sm:p-4 mb-8"
-        style={{ border: "1px solid #E4E7EC" }}>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <div className="flex items-center border rounded px-2 py-1 bg-white w-[140px] sm:w-auto text-xs sm:text-sm">
-            <FaSearch className="text-gray-400 mr-2 text-xs sm:text-base" />
-            <input
-              type="text"
-              placeholder="Search"
-              className="bg-transparent outline-none w-full text-xs sm:text-sm"
-              style={{ minWidth: 0 }}
-            />
+      {/* Table/Grid with controls — single white card matching Figma */}
+      <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E4E7EC" }}>
+        {/* Controls: Search, Filter, Create, Export */}
+        <div className="flex flex-wrap gap-2 sm:gap-4 items-center justify-between p-2 sm:p-4 border-b" style={{ borderColor: "#E4E7EC" }}>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <div className="flex items-center border rounded px-2 py-1 bg-white w-[140px] sm:w-auto text-xs sm:text-sm" style={{ borderColor: "#D0D5DD" }}>
+              <FaSearch className="text-gray-400 mr-2 text-xs sm:text-base" />
+              <input
+                type="text"
+                placeholder="Search"
+                className="bg-transparent outline-none w-full text-xs sm:text-sm"
+                style={{ minWidth: 0 }}
+              />
+            </div>
+            <div className="flex items-center border rounded px-2 py-1 bg-white w-[90px] sm:w-auto text-xs sm:text-sm" style={{ borderColor: "#D0D5DD" }}>
+              <FaFilter className="text-gray-400 mr-2 text-xs sm:text-base" />
+              <span>Filter</span>
+            </div>
           </div>
-          <div className="flex items-center border rounded px-2 py-1 bg-white w-[90px] sm:w-auto text-xs sm:text-sm">
-            <FaFilter className="text-gray-400 mr-2 text-xs sm:text-base" />
-            <span>Filter</span>
+          <div className="flex gap-2 sm:gap-3 relative w-full sm:w-auto justify-end">
+            <button
+              className="flex items-center gap-1 sm:gap-2 bg-red-600 border cursor-pointer border-red-600 text-white rounded-md px-2 sm:px-4 py-1.5 sm:py-2 font-medium hover:bg-red-700 transition text-xs sm:text-sm"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <FaPlus className="text-white text-xs sm:text-base" />
+              <span>Create New</span>
+            </button>
+            <button
+              className="flex items-center gap-1 sm:gap-2 bg-white border cursor-pointer border-red-600 text-red-600 rounded-md px-2 sm:px-4 py-1.5 sm:py-2 font-medium hover:bg-red-50 transition text-xs sm:text-sm"
+              onClick={() => setShowExportModal((prev) => !prev)}
+            >
+              <FaDownload className="text-red-600 text-xs sm:text-base" />
+              Export
+            </button>
+            {showExportModal && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  style={{ background: "transparent" }}
+                  onClick={() => setShowExportModal(false)}
+                />
+                <ExportModal
+                  onClose={() => setShowExportModal(false)}
+                  includeAll={true}
+                />
+              </>
+            )}
           </div>
         </div>
-        <div className="flex gap-2 sm:gap-3 relative w-full sm:w-auto justify-end">
-          {/* Create New Button */}
-          <button
-            className="flex items-center gap-1 sm:gap-2 bg-red-600 border cursor-pointer border-red-600 text-white rounded-md px-2 sm:px-4 py-1.5 sm:py-2 font-medium shadow hover:bg-red-700 transition text-xs sm:text-sm"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <FaPlus className="text-white text-xs sm:text-base" />
-            <span>Create New</span>
-          </button>
-          {/* Export Button */}
-          <button
-            className="flex items-center gap-1 sm:gap-2 bg-white border cursor-pointer border-red-600 text-red-600 rounded-md px-2 sm:px-4 py-1.5 sm:py-2 font-medium shadow hover:bg-red-50 transition text-xs sm:text-sm"
-            onClick={() => setShowExportModal((prev) => !prev)}
-          >
-            <FaDownload className="text-red-600 text-xs sm:text-base" />
-            Export
-          </button>
-          {showExportModal && (
-            <>
-              {/* Overlay to close modal when clicking outside */}
-              <div
-                className="fixed inset-0 z-40"
-                style={{ background: "transparent" }}
-                onClick={() => setShowExportModal(false)}
-              />
-              <ExportModal
-                onClose={() => setShowExportModal(false)}
-                // filters={yourFiltersObject}
-                includeAll={true}
-              />
-            </>
-          )}
-        </div>
-      </div>
-      {/* Table/Grid or Empty State */}
-      <div className="bg-white rounded-xl p-0 overflow-x-auto" style={{ border: "1px solid #E4E7EC" }}>
         {loading ? (
           <div className="flex items-center justify-center py-20">Loading...</div>
         ) : filteredUsers.length === 0 ? (
-          <div className="flex bg-white mt-4 flex-col items-center justify-center py-16 sm:py-20 rounded-xl "
-            style={{ border: '1px solid #E4E7EC' }}>
+          <div className="flex bg-white flex-col items-center justify-center py-16 sm:py-20">
             <img
               src="https://res.cloudinary.com/cloud-two-tech/image/upload/v1750963970/Illustration_found_gfbbgd.png"
               alt="No data"

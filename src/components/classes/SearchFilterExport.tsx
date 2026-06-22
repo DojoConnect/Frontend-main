@@ -21,7 +21,7 @@ export default function SearchFilterExport({
   return (
     <>
       <div
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6"
+        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
         style={{
           position: "relative",
           overflow: "visible",

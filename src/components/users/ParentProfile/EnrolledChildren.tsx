@@ -17,8 +17,8 @@ export default function EnrolledChildren({ childrenData }: EnrolledChildrenProps
 
   return (
     <div>
-      <div className="flex items-center justify-between bg-gray-100 rounded-md px-6 py-4 mb-4">
-        <span className="text-black font-semibold text-base">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-gray-800 font-semibold text-base">
           Enrolled children ({hasChildren ? childrenData.length : 0})
         </span>
         <button

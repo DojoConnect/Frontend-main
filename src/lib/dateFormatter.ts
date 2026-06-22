@@ -1,16 +1,16 @@
 /**
- * Format a date to "day month, year" format
- * e.g., "4th June, 2026"
+ * Format a date to "day abbr-month, year" format
+ * e.g., "14 May, 2029"
  */
 export function formatDateCustom(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
 
   const day = d.getDate();
-  const month = d.toLocaleString('en-US', { month: 'long' });
+  const month = d.toLocaleString('en-US', { month: 'short' });
   const year = d.getFullYear();
 
-  // Format as "Month day, year" (e.g., "June 7, 2026")
-  return `${month} ${day}, ${year}`;
+  // Format as "Day Month, Year" (e.g., "14 May, 2029")
+  return `${day} ${month}, ${year}`;
 }
 
 /**

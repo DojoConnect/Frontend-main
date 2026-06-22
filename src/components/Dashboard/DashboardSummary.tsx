@@ -13,12 +13,10 @@ const MONTHS = [
 const YEARS = Array.from({ length: 20 }, (_, i) => 2016 + i);
 
 const METRIC_LABELS = [
-  'Total Users',
-  'Total Dojos',
+  'Active Dojos',
   'Active Subscriptions',
-  'Unpaid Subscriptions',
-  'Total Classes',
-  'Monthly Revenue',
+  'Active Classes',
+  'Revenue',
   'Avg. Revenue Per Dojo',
   'Gross Transaction Vol.',
   'Completed Onboarding',
@@ -38,12 +36,10 @@ function chunkArray<T>(arr: T[], chunkSizes: number[]) {
 
 function getIcon(label: string) {
   switch (label) {
-    case 'Total Users': return <IconA />;
-    case 'Total Dojos': return <IconA />;
+    case 'Active Dojos': return <IconA />;
     case 'Active Subscriptions': return <IconB />;
-    case 'Unpaid Subscriptions': return <IconC />;
-    case 'Total Classes': return <IconD />;
-    case 'Monthly Revenue': return <IconD />;
+    case 'Active Classes': return <IconD />;
+    case 'Revenue': return <IconE />;
     case 'Avg. Revenue Per Dojo': return <IconE />;
     case 'Gross Transaction Vol.': return <IconF />;
     case 'Completed Onboarding': return <IconG />;
@@ -62,12 +58,10 @@ function buildStatsFromApiData(apiData: DashboardStats | null, totalUsers: numbe
   }));
 
   return [
-    { label: "Total Users", value: totalUsers, icon: getIcon("Total Users"), percentage: "0%" },
-    { label: "Total Dojos", value: apiData.activeDojos ?? 0, icon: getIcon("Total Dojos"), percentage: "0%" },
+    { label: "Active Dojos", value: apiData.activeDojos ?? 0, icon: getIcon("Active Dojos"), percentage: "0%" },
     { label: "Active Subscriptions", value: apiData.activeSubscriptions ?? 0, icon: getIcon("Active Subscriptions"), percentage: "0%" },
-    { label: "Unpaid Subscriptions", value: 0, icon: getIcon("Unpaid Subscriptions"), percentage: "0%" },
-    { label: "Total Classes", value: apiData.activeClasses ?? 0, icon: getIcon("Total Classes"), percentage: "0%" },
-    { label: "Monthly Revenue", value: apiData.totalRevenue ?? "0", icon: getIcon("Monthly Revenue"), percentage: "0%" },
+    { label: "Active Classes", value: apiData.activeClasses ?? 0, icon: getIcon("Active Classes"), percentage: "0%" },
+    { label: "Revenue", value: apiData.totalRevenue ?? "0", icon: getIcon("Revenue"), percentage: "0%" },
     { label: "Avg. Revenue Per Dojo", value: apiData.avgRevenuePerDojo ?? "0", icon: getIcon("Avg. Revenue Per Dojo"), percentage: "0%" },
     { label: "Gross Transaction Vol.", value: apiData.grossTransactionVolume ?? "0", icon: getIcon("Gross Transaction Vol."), percentage: "0%" },
     { label: "Completed Onboarding", value: apiData.completedOnboarding ?? 0, icon: getIcon("Completed Onboarding"), percentage: "0%" },
@@ -165,19 +159,19 @@ export default function DashboardSummary() {
         }
 
         setUserStats([
-          { label: 'Dojo Admins', value: counts.dojoOwners, color: '#F53033' },
-          { label: 'Instructors', value: counts.instructors, color: '#FFE5E5' },
-          { label: 'Parents', value: counts.parents, color: '#A3A3A3' },
-          { label: 'Students', value: counts.children, color: '#E5E7EB' }
+          { label: 'Dojo Admins', value: counts.dojoOwners, color: '#F09898' },
+          { label: 'Instructors', value: counts.instructors, color: '#E51B1B' },
+          { label: 'Parents', value: counts.parents, color: '#E51B1B' },
+          { label: 'Students', value: counts.children, color: '#E51B1B' }
         ]);
       } catch (error) {
         console.error('Failed to fetch users:', error);
         setTotalUsers(0);
         setUserStats([
-          { label: 'Dojo Admins', value: 0, color: '#F53033' },
-          { label: 'Instructors', value: 0, color: '#FFE5E5' },
-          { label: 'Parents', value: 0, color: '#A3A3A3' },
-          { label: 'Students', value: 0, color: '#E5E7EB' }
+          { label: 'Dojo Admins', value: 0, color: '#F09898' },
+          { label: 'Instructors', value: 0, color: '#E51B1B' },
+          { label: 'Parents', value: 0, color: '#E51B1B' },
+          { label: 'Students', value: 0, color: '#E51B1B' }
         ]);
       } finally {
         usersComplete = true;
@@ -201,7 +195,7 @@ export default function DashboardSummary() {
 
   // Build stats for cards from API data
   const stats = buildStatsFromApiData(apiData, totalUsers);
-  const cardRows = chunkArray(stats, [4, 4, 3]);
+  const cardRows = chunkArray(stats, [3, 3, 3]);
 
   // Dummy dojos for Top Dojo Revenue 
   type DojoType = {
@@ -581,7 +575,7 @@ const SeventhCardModal = () => (
         
           <>
             {/* First row: 4 cards */}
-           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
   {cardRows[0].map((card, idx) => (
     <div
       key={card.label}
@@ -597,14 +591,14 @@ const SeventhCardModal = () => (
         <span className="text-xs text-gray-600 truncate">{card.label}</span>
         <GreenBadge value={card.percentage ?? "0%"} />
       </div>
-                  {/* Card 3: Show "View All" instead of info icon */}
+                  {/* Card 3 (Active Classes): Show "View All", Card 1 (Active Dojos): info modal */}
                  {idx === 2 ? (
         <button
           className="absolute top-4 right-4 flex items-center gap-1 text-gray-500 font-semibold cursor-pointer bg-transparent border-none"
           style={{ textDecoration: 'none', fontSize: '0.85rem' }}
-          onClick={() => alert('View all Unpaid Subscriptions')}
+          onClick={() => alert('View all Active Classes')}
         >
-          View All <ArrowRightIcon />
+          View all <ArrowRightIcon />
         </button>
       ) : idx === 0 ? (
         <>
@@ -617,18 +611,7 @@ const SeventhCardModal = () => (
           </button>
           {openModal === card.label && <FirstCardModal />}
         </>
-) : idx === 6 ? (
-        <>
-          <button
-            className="absolute top-4 right-4 cursor-pointer"
-            onClick={() => setOpenModal(card.label)}
-            aria-label="Open details"
-          >
-            <ReadMoreIcon />
-          </button>
-          {openModal === card.label && <SeventhCardModal />}
-        </>
-      ) : (
+) : (
         <button
           className="absolute top-4 right-4 cursor-pointer text-gray-400"
           aria-label="Info"
@@ -757,7 +740,7 @@ const SeventhCardModal = () => (
                   </div>
                 </div>
                 <button className="mt-6 text-[#E51B1B] font-semibold hover:underline focus:outline-none cursor-pointer">
-                  View Details
+                  View More
                 </button>
               </div>
             </div>

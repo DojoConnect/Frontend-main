@@ -44,46 +44,44 @@ export default function ProfileHeader({
         </button>
         <span className="text-gray-500 text-xs sm:text-sm mr-1 sm:mr-2">Go Back</span>
         <span className="text-gray-400 mx-1 sm:mx-2">|</span>
-        <span className="text-gray-500 text-xs sm:text-sm">User</span>
+        <span className="text-gray-500 text-xs sm:text-sm">Users</span>
         <span className="text-gray-400 mx-1 sm:mx-2">/</span>
         <span className="text-gray-500 text-xs sm:text-sm">User List</span>
         <span className="text-gray-400 mx-1 sm:mx-2">/</span>
         <span className="text-red-600 text-xs sm:text-sm font-semibold">User Profile</span>
       </div>
       {/* Profile Info Row */}
-      <div className="flex  md:items-center items-start  justify-center mb-6 sm:mb-8">
-        {(() => {
-          const base = process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL || '';
-          // Determine real image src from backend fields. If none, pass undefined so Avatar shows SVG placeholder.
-          const possible = profile?.avatar || profile?.avatarUrl || profile?.imageUrl || profile?.image || profile?.profileImage || profile?.picture || profile?.cloudinary_url || profile?.profile_picture;
-          let avatarSrc: string | undefined;
-          if (possible && typeof possible === 'string') {
-            if (possible.startsWith('http')) {
-              avatarSrc = possible;
-            } else if (possible.startsWith('/')) {
-              avatarSrc = `${base}${possible}`;
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
+        <div className="flex items-center">
+          {(() => {
+            const base = process.env.NEXT_PUBLIC_BACK_OFFICE_API_URL || '';
+            const possible = profile?.avatar || profile?.avatarUrl || profile?.imageUrl || profile?.image || profile?.profileImage || profile?.picture || profile?.cloudinary_url || profile?.profile_picture;
+            let avatarSrc: string | undefined;
+            if (possible && typeof possible === 'string') {
+              if (possible.startsWith('http')) {
+                avatarSrc = possible;
+              } else if (possible.startsWith('/')) {
+                avatarSrc = `${base}${possible}`;
+              } else {
+                avatarSrc = `${base}/${possible}`;
+              }
+            } else if (profile?.avatar_public_id || profile?.avatarPublicId) {
+              const id = profile.avatar_public_id || profile.avatarPublicId;
+              avatarSrc = `${base}/images/${id}`;
+            } else if (profile?.image_path) {
+              avatarSrc = `${base}/${profile.image_path}`;
             } else {
-              avatarSrc = `${base}/${possible}`;
+              avatarSrc = undefined;
             }
-          } else if (profile?.avatar_public_id || profile?.avatarPublicId || profile?.avatar_public_id) {
-            const id = profile.avatar_public_id || profile.avatarPublicId || profile.avatar_public_id;
-            avatarSrc = `${base}/images/${id}`;
-          } else if (profile?.image_path) {
-            avatarSrc = `${base}/${profile.image_path}`;
-          } else {
-            avatarSrc = undefined;
-          }
-
-          return (
-            <Avatar src={avatarSrc} alt={profile.name || profile.className} size={avatarSize} className="mr-3 sm:mr-6" />
-          );
-        })()}
-        <div className="flex flex-col items-start mr-3 sm:mr-6">
-          <div className="text-sm sm:text-xl font-bold capitalize">{profile.name}</div>
-          <div className="text-gray-500 text-xs sm:text-sm mt-1">{profile.email}</div>
+            return <Avatar src={avatarSrc} alt={profile.name || profile.className} size={avatarSize} className="mr-3 sm:mr-6" />;
+          })()}
+          <div className="flex flex-col items-start">
+            <div className="text-base sm:text-2xl font-bold capitalize">{profile.name}</div>
+            <div className="text-gray-500 text-xs sm:text-sm mt-1">{profile.email}</div>
+          </div>
         </div>
-         <button
-          className={`rounded-full px-3 py-1 sm:px-6 sm:py-2 text-[11px] sm:text-sm font-semibold capitalize ${statusStyles[(profile.status || "active").toLowerCase()] || "bg-gray-100 text-gray-500"}`}
+        <button
+          className={`rounded-full px-4 py-1.5 sm:px-6 sm:py-2 text-xs sm:text-sm font-semibold capitalize ${statusStyles[(profile.status || "active").toLowerCase()] || "bg-gray-100 text-gray-500"}`}
         >
           {(profile.status || "Active").charAt(0).toUpperCase() + (profile.status || "Active").slice(1)}
         </button>

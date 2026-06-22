@@ -8,8 +8,14 @@ import { formatDateCustom } from '@/lib/dateFormatter';
 export default function ClassOverview({ profile }: { profile: any }) {
   return (
     <div>
-      <div className="flex items-center justify-between rounded-md bg-gray-100 px-6 py-4 mb-6">
-        <span className="text-black font-semibold text-base">Basic Class Information</span>
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-gray-800 font-semibold text-base">Basic Class Information</span>
+        <button className="flex items-center gap-1 border border-gray-300 rounded-md px-4 py-2 bg-white text-black text-sm hover:bg-gray-50">
+          Actions
+          <svg className="w-4 h-4 text-gray-600 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white border border-gray-200 rounded-md p-6 flex flex-col gap-6">
@@ -69,6 +75,13 @@ export default function ClassOverview({ profile }: { profile: any }) {
             <div>
               <div className="text-gray-500 text-xs">Class Frequency</div>
               <div className="text-black font-medium">{profile.frequency || ''}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <MdTimer className="text-gray-400 w-5 h-5" />
+            <div>
+              <div className="text-gray-500 text-xs">Class Schedule</div>
+              <div className="text-black font-medium">{profile.schedule || profile.class_schedule || profile.classSchedule || ''}</div>
             </div>
           </div>
           <div className="flex items-center gap-3">

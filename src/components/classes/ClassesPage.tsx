@@ -68,35 +68,33 @@ export default function ClassesPage() {
       {/* Header */}
       <h1 className="text-2xl font-semibold text-[#0F1828] mb-4">Classes</h1>
 
-      {/* Controls */}
-      <SearchFilterExport />
- {/* Empty State */}
-    {!loading && classesData.length === 0 ? (
-      <div className="flex flex-col items-center justify-center bg-white rounded-xl py-20 mb-6" style={{ border: "1px solid #E4E7EC" }}>
-        <img
-          src="/illustration.png"
-          alt="No classes"
-          className="w-[225px] h-[188px] mb-4"
-        />
-        <h2 className="text-2xl font-semibold text-[#303030]">Nothing here yet...</h2>
-        <p className="text-base text-center text-[#9E9E9E] mt-3">Whoops ... there’s no class information available yet</p>
+      {/* Single card: controls + table + pagination */}
+      <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E4E7EC" }}>
+        <div className="p-2 sm:p-4 border-b" style={{ borderColor: "#E4E7EC" }}>
+          <SearchFilterExport />
+        </div>
+        {!loading && classesData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <img
+              src="https://res.cloudinary.com/cloud-two-tech/image/upload/v1750963970/Illustration_found_gfbbgd.png"
+              alt="No classes"
+              className="w-[225px] h-[188px] mb-4"
+            />
+            <h2 className="text-2xl font-semibold text-[#303030]">Nothing here yet...</h2>
+            <p className="text-base text-center text-[#9E9E9E] mt-3">Whoops ... there’s no class information available yet</p>
+          </div>
+        ) : (
+          <>
+            <ClassesTable classes={pagedClasses} loading={loading} />
+            <Pagination
+              totalRows={classesData.length}
+              rowsPerPage={rowsPerPage}
+              currentPage={page}
+              onPageChange={setPage}
+            />
+          </>
+        )}
       </div>
-    ) : (
-      <>
-     {/* Table */}
-      <div className="bg-white rounded-xl p-0 mb-6" style={{ border: "1px solid #E4E7EC" }}>
-        <ClassesTable classes={pagedClasses} loading={loading} />
-      </div>
-
-      {/* Pagination */}
-      <Pagination
-        totalRows={classesData.length}
-        rowsPerPage={rowsPerPage}
-        currentPage={page}
-        onPageChange={setPage}
-      />
-      </>
-    )}
     </div>
   )
 }

@@ -70,7 +70,7 @@ export default function InstructorPage() {
             const res = await boInstructorService.getInstructorClasses(String(id));
             setAssignedClasses((res && res.data) || []);
           }
-          if (activeTab === 'Activites') {
+          if (activeTab === 'Activites' || activeTab === 'Overview') {
             const res = await boInstructorService.getInstructorActivities(String(id));
             setActivities((res && res.data) || []);
           }
@@ -83,7 +83,7 @@ export default function InstructorPage() {
 
   if (loading) return <MainLayout><div>Loading...</div></MainLayout>;
   if (!profile) return <MainLayout><div>{error}</div></MainLayout>;
-  if ((profile.role || profile.userType) !== "instructor") {
+  if (!["instructor"].includes(String(profile.role || profile.userType).toLowerCase())) {
     return <MainLayout><div>Not an Instructor profile</div></MainLayout>;
   }
   return (
@@ -91,7 +91,7 @@ export default function InstructorPage() {
       <div className="p-6">
         <ProfileHeader profile={profile} onBack={() => router.push('/dashboard?tab=users')} />
         <ProfileTabs tabs={[...tabs]} activeTab={activeTab} setActiveTab={setActiveTab} />
-        {activeTab === "Overview" && <Overview profile={profile} email={email || ''} />}
+        {activeTab === "Overview" && <Overview profile={profile} email={email || ''} activities={activities} setActiveTab={setActiveTab as (tab: string) => void} />}
         {activeTab === "Assigned Classes" && (
           <div className="mt-6">
             <AssignedClassesTable assignedClasses={assignedClasses.length ? assignedClasses : profile.assigned_classes || []} />

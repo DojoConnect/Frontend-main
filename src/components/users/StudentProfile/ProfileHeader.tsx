@@ -31,21 +31,23 @@ export default function ProfileHeader({
         </button>
         <span className="text-gray-500 text-xs sm:text-sm mr-1 sm:mr-2">Go Back</span>
         <span className="text-gray-400 mx-1 sm:mx-2">|</span>
-        <span className="text-gray-500 text-xs sm:text-sm">User</span>
+        <span className="text-gray-500 text-xs sm:text-sm">Users</span>
         <span className="text-gray-400 mx-1 sm:mx-2">/</span>
         <span className="text-gray-500 text-xs sm:text-sm">User List</span>
         <span className="text-gray-400 mx-1 sm:mx-2">/</span>
         <span className="text-red-600 text-xs sm:text-sm font-semibold">User Profile</span>
       </div>
       {/* Profile Info Row */}
-      <div className="flex items-center justify-center mb-6 sm:mb-8">
-        <Avatar src={profile.avatar || profile.classImg} alt={profile.name || profile.className} size={64} className="mr-3 sm:mr-6" />
-        <div className="flex flex-col items-start mr-3 sm:mr-6">
-          <div className="text-base sm:text-xl font-bold">{profile.name}</div>
-          <div className="text-gray-500 text-xs sm:text-sm mt-1">{profile.email}</div>
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
+        <div className="flex items-center">
+          <Avatar src={profile.avatar || profile.avatarUrl || profile.classImg} alt={profile.name || profile.className} size={64} className="mr-3 sm:mr-6" />
+          <div className="flex flex-col items-start">
+            <div className="text-base sm:text-2xl font-bold">{profile.name}</div>
+            <div className="text-gray-500 text-xs sm:text-sm mt-1">{profile.email}</div>
+          </div>
         </div>
-         <button
-          className={`rounded-full px-3 py-1 sm:px-6 sm:py-2 text-[11px] sm:text-sm font-semibold capitalize ${statusStyles[(profile.status || "active").toLowerCase()] || "bg-gray-100 text-gray-500"}`}
+        <button
+          className={`rounded-full px-4 py-1.5 sm:px-6 sm:py-2 text-xs sm:text-sm font-semibold capitalize ${statusStyles[(profile.status || "active").toLowerCase()] || "bg-gray-100 text-gray-500"}`}
         >
           {(profile.status || "Active").charAt(0).toUpperCase() + (profile.status || "Active").slice(1)}
         </button>
