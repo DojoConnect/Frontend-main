@@ -28,6 +28,7 @@ export interface ClassRow {
 export default function ClassesPage() {
    const [classesData, setClassesData] = useState<ClassRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -59,8 +60,14 @@ export default function ClassesPage() {
       .catch(() => setClassesData([]))
       .finally(() => setLoading(false));
   }, []);
-// Slice data for current page
-  const pagedClasses = classesData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  // Filter + paginate
+  const filteredClasses = searchQuery
+    ? classesData.filter((c) =>
+        c.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.instructor.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : classesData;
+  const pagedClasses = filteredClasses.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
 
   return (
@@ -71,9 +78,12 @@ export default function ClassesPage() {
       {/* Single card: controls + table + pagination */}
       <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E4E7EC" }}>
         <div className="p-2 sm:p-4 border-b" style={{ borderColor: "#E4E7EC" }}>
-          <SearchFilterExport />
+          <SearchFilterExport
+            searchQuery={searchQuery}
+            onSearch={(q) => { setSearchQuery(q); setPage(1); }}
+          />
         </div>
-        {!loading && classesData.length === 0 ? (
+        {!loading && filteredClasses.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <img
               src="https://res.cloudinary.com/cloud-two-tech/image/upload/v1750963970/Illustration_found_gfbbgd.png"
@@ -87,7 +97,7 @@ export default function ClassesPage() {
           <>
             <ClassesTable classes={pagedClasses} loading={loading} />
             <Pagination
-              totalRows={classesData.length}
+              totalRows={filteredClasses.length}
               rowsPerPage={rowsPerPage}
               currentPage={page}
               onPageChange={setPage}

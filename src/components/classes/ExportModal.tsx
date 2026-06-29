@@ -38,17 +38,14 @@ const ExportModal = ({ onClose }: { onClose: () => void }) => {
   // No need for selected state, just handle click
   const handleExport = async () => {
     try {
-      const payload = {
-        format: "xlsx",
-        include_all: true,
-        filters: {
-          status: "active",
-          level: "Beginner"
-        }
-      };
-      const res = await fetch("https://apis.dojoconnect.app/export/classes", {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('dojoconnect_token') : null;
+      const payload = { format: "xlsx", include_all: true };
+      const res = await fetch("https://apis.dojoconnect.app/api/backoffice/classes/export", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error("Export failed");

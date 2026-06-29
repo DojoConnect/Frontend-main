@@ -66,6 +66,8 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const rowsPerPage = 5;
 
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteUser, setDeleteUser] = useState<any>(null);
 
@@ -114,13 +116,20 @@ export default function UsersPage() {
     fetchUsers();
   }, [activeFilter, customRange]);
 
-  // Filtered users for current tab
-  const filteredUsers =
+  // Filtered users for current tab + search
+  const tabFiltered =
     activeTab === "all"
       ? users
       : activeTab === "child"
         ? users.filter((u) => ["student", "child"].includes((u.role || "").toLowerCase()))
         : users.filter((u) => (u.role || "").toLowerCase() === activeTab);
+
+  const filteredUsers = searchQuery
+    ? tabFiltered.filter((u) =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : tabFiltered;
 
   // Filtered users for current page
   const pagedUsers = filteredUsers.slice((page - 1) * rowsPerPage, page * rowsPerPage);
@@ -247,6 +256,8 @@ export default function UsersPage() {
                 placeholder="Search"
                 className="bg-transparent outline-none w-full text-xs sm:text-sm"
                 style={{ minWidth: 0 }}
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
               />
             </div>
             <div className="flex items-center border rounded px-2 py-1 bg-white w-[90px] sm:w-auto text-xs sm:text-sm" style={{ borderColor: "#D0D5DD" }}>

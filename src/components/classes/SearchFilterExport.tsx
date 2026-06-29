@@ -7,6 +7,8 @@ interface SearchFilterExportProps {
   ownerEmail?: string;
   showCreate?: boolean;
   onCreateNew?: () => void;
+  searchQuery?: string;
+  onSearch?: (q: string) => void;
 }
 
 export default function SearchFilterExport({
@@ -14,6 +16,8 @@ export default function SearchFilterExport({
   ownerEmail = "admin@example.com",
   showCreate = true,
   onCreateNew,
+  searchQuery = "",
+  onSearch,
 }: SearchFilterExportProps) {
   const [showExport, setShowExport] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -41,6 +45,8 @@ export default function SearchFilterExport({
               type="text"
               placeholder="Search"
               className="outline-none bg-transparent text-xs sm:text-sm w-full"
+              value={searchQuery}
+              onChange={(e) => onSearch?.(e.target.value)}
             />
           </div>
           {/* Filter */}

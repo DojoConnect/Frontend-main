@@ -34,7 +34,16 @@ export default function UsersTable({ user, onUserClick, onDeleteClick, showUserT
   const [actionUser, setActionUser] = useState<User | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
   const actionMenuRef = useRef<HTMLDivElement>(null);
+
+  const allSelected = user.length > 0 && selectedIds.size === user.length;
+  const toggleSelectAll = () => setSelectedIds(allSelected ? new Set() : new Set(user.map(u => u.id)));
+  const toggleSelect = (id: string | number) => setSelectedIds(prev => {
+    const s = new Set(prev);
+    s.has(id) ? s.delete(id) : s.add(id);
+    return s;
+  });
 
   // Close action menu if clicked outside
   useEffect(() => {
@@ -62,7 +71,12 @@ export default function UsersTable({ user, onUserClick, onDeleteClick, showUserT
           <thead>
             <tr className="bg-gray-100">
               <th className="px-2 sm:px-4 py-2 sm:py-3">
-                <input type="checkbox" className="w-3 h-3 sm:w-4 sm:h-4" />
+                <input
+                  type="checkbox"
+                  className="w-3 h-3 sm:w-4 sm:h-4 cursor-pointer"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                />
               </th>
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-xs font-semibold text-gray-500">Name</th>
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] sm:text-xs font-semibold text-gray-500">Email</th>
@@ -81,8 +95,13 @@ export default function UsersTable({ user, onUserClick, onDeleteClick, showUserT
                 className="hover:bg-gray-50 cursor-pointer"
                 onClick={() => { onUserClick && onUserClick(u) }}
               >
-                <td className="px-2 sm:px-4 py-2 sm:py-3">
-                  <input type="checkbox" className="w-3 h-3 sm:w-4 sm:h-4" />
+                <td className="px-2 sm:px-4 py-2 sm:py-3" onClick={e => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    className="w-3 h-3 sm:w-4 sm:h-4 cursor-pointer"
+                    checked={selectedIds.has(u.id)}
+                    onChange={() => toggleSelect(u.id)}
+                  />
                 </td>
                 <td className="flex items-center gap-2 px-2 sm:px-4 py-2 sm:py-3">
                   <Avatar src={u.avatar || null} alt={u.name} size={32} className="w-6 h-6 sm:w-8 sm:h-8 rounded-full" />

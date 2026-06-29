@@ -38,9 +38,13 @@ const ExportModal = ({
     setSelected(key);
     setDownloading(true);
     try {
-      const res = await fetch("https://apis.dojoconnect.app/export/users", {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('dojoconnect_token') : null;
+      const res = await fetch("https://apis.dojoconnect.app/api/backoffice/users/export", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           format,
           include_all: includeAll,
