@@ -64,7 +64,7 @@ export default function UsersPage() {
   const exportBtnRef = useRef<HTMLButtonElement>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [page, setPage] = useState(1);
-  const rowsPerPage = 5;
+  const rowsPerPage = 10;
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -84,6 +84,8 @@ export default function UsersPage() {
         role: 'all',
         sortBy: 'createdAt',
         sortOrder: 'desc',
+        limit: 100,
+        page: 1,
       });
       
       if (Array.isArray(response.data)) {

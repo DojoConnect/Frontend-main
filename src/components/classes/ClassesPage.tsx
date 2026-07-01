@@ -32,7 +32,7 @@ export default function ClassesPage() {
 
   // Pagination state
   const [page, setPage] = useState(1);
-  const rowsPerPage = 5;
+  const rowsPerPage = 10;
 
   useEffect(() => {
     boClassesService

@@ -386,11 +386,12 @@ export default function UserSummary({
 
   return (
    <div className="gap-4 rounded-xl">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {cardData.slice(0, 4).map(({ label, valueKey, icon, percent }) => (
+      {/* Row 1: 4 role stat cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        {cardData.slice(0, 4).map(({ label, valueKey, icon }) => (
           <div
             key={label}
-            className="bg-[#FFFFFF] flex flex-col justify-between rounded-lg p-4 h-[130px] shadow-sm w-full cursor-pointer relative"
+            className="bg-white flex flex-col justify-between rounded-lg p-4 h-[130px] shadow-sm w-full cursor-pointer relative"
             onClick={() => router.push(`/dashboard/users/Summary/${valueKey}`)}
             style={{ minWidth: 0 }}
           >
@@ -402,14 +403,16 @@ export default function UserSummary({
                 type="button"
                 onClick={e => {
                   e.stopPropagation();
- router.push(`/dashboard/users/Summary/${valueKey}`);
+                  router.push(`/dashboard/users/Summary/${valueKey}`);
                 }}
               >
                 View all <ArrowRight size={13} />
               </button>
             </div>
             <div className="flex flex-col flex-1 justify-center">
-              <div className="text-lg text-[#0F1828] font-semibold mb-1">{values[valueKey] ?? 0}</div>
+              <div className="text-lg text-[#0F1828] font-semibold mb-1">
+                {loading ? <span className="inline-block w-8 h-4 bg-gray-100 rounded animate-pulse" /> : (values[valueKey] ?? 0)}
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-600">{label}</span>
                 <div className="flex items-center bg-[#E6F4EA] text-[#15803D] rounded px-1.5 py-0.5 ml-2 text-[11px] font-semibold">
@@ -420,6 +423,61 @@ export default function UserSummary({
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Row 2: Pending Profiles, Recent Profiles, User Activity Trends */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* Pending Profiles */}
+        <div className="bg-white rounded-lg p-4 shadow-sm flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            {cardData[4].icon}
+            <span className="text-xs text-gray-400 font-medium">Pending</span>
+          </div>
+          <div className="text-lg font-semibold text-[#0F1828]">
+            {loading ? <span className="inline-block w-8 h-4 bg-gray-100 rounded animate-pulse" /> : 0}
+          </div>
+          <span className="text-xs text-gray-500">Pending Profiles</span>
+        </div>
+
+        {/* Recent Profiles */}
+        <div className="bg-white rounded-lg p-4 shadow-sm flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            {cardData[5].icon}
+            <span className="text-xs text-gray-400 font-medium">Recent</span>
+          </div>
+          <div className="text-lg font-semibold text-[#0F1828]">
+            {loading ? <span className="inline-block w-8 h-4 bg-gray-100 rounded animate-pulse" /> : (
+              stats
+                ? stats.dojoOwners.count + stats.instructors.count + stats.parents.count + stats.children.count
+                : Object.values(values).reduce((a, b) => a + b, 0)
+            )}
+          </div>
+          <span className="text-xs text-gray-500">Recent Profiles</span>
+        </div>
+
+        {/* User Activity Trends */}
+        <div className="bg-white rounded-lg p-4 shadow-sm flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            {cardData[6].icon}
+            <span className="text-xs text-gray-400 font-medium">Trends</span>
+          </div>
+          <div className="text-xs text-gray-600 font-medium mb-1">User Activity Trends</div>
+          <svg viewBox="0 0 120 40" className="w-full h-10" preserveAspectRatio="none">
+            <polyline
+              fill="none"
+              stroke="#E51B1B"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              points="0,35 20,28 40,32 60,18 80,22 100,10 120,15"
+            />
+            <polyline
+              fill="rgba(229,27,27,0.08)"
+              stroke="none"
+              points="0,35 20,28 40,32 60,18 80,22 100,10 120,15 120,40 0,40"
+            />
+          </svg>
+        </div>
       </div>
     </div>
   );
